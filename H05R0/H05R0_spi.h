@@ -39,8 +39,8 @@
 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __spi_H
-#define __spi_H
+#ifndef __H05R0_spi_H
+#define __H05R0_spi_H
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -50,16 +50,16 @@
 #include "stm32f0xx_hal.h"
 
 
-extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi1;
 extern void Error_Handler(void);
-void MX_SPI2_Init(void);
+void MX_SPI1_Init(void);
 
 
 
 #ifdef __cplusplus
 }
 #endif
-#endif /*__ spi_H */
+#endif /*__H05R0_spi_H */
 
 /**
   * @}
