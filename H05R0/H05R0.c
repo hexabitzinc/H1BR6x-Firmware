@@ -45,35 +45,9 @@ UART_HandleTypeDef huart5;
    ----------------------------------------------------------------------- 
 */
 
-/* --- H05R0 message processing task. 
-*/
-H05R0_Status H05R0_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst)
-{
-	H05R0_Status result = H05R0_OK;
-	
-	switch (code)
-	{
-
-		default:
-			result = H05R0_ERR_UnknownMessage;
-			break;
-	}			
-
-	return result;	
-}
-
-/*-----------------------------------------------------------*/
-
-
-
-/* -----------------------------------------------------------------------
-	|																APIs	 																 	|
-   ----------------------------------------------------------------------- 
-*/
-
 /* --- H05R0 module initialization. 
 */
-void H05R0_Init(void)
+void Module_Init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
 	
@@ -92,6 +66,51 @@ void H05R0_Init(void)
   
 }
 /*-----------------------------------------------------------*/
+
+/* --- H05R0 message processing task. 
+*/
+Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst)
+{
+	Module_Status result = H05R0_OK;
+	
+	switch (code)
+	{
+
+		default:
+			result = H05R0_ERR_UnknownMessage;
+			break;
+	}			
+
+	return result;	
+}
+
+/*-----------------------------------------------------------*/
+
+/* --- Get the port for a given UART. 
+*/
+uint8_t GetPort(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART4)
+			return P1;
+	else if (huart->Instance == USART2)
+			return P2;
+	else if (huart->Instance == USART3)
+			return P3;
+	else if (huart->Instance == USART1)
+			return P4;
+	else if (huart->Instance == USART5)
+			return P5;
+	
+	return 0;
+}
+
+
+/* -----------------------------------------------------------------------
+	|																APIs	 																 	|
+   ----------------------------------------------------------------------- 
+*/
+
+
 
 
 /*-----------------------------------------------------------*/

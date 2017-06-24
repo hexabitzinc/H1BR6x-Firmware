@@ -83,7 +83,8 @@ typedef enum
 {
   H05R0_OK = 0,
 	H05R0_ERR_UnknownMessage = 1,
-} H05R0_Status;
+	H05R0_ERROR = 255
+} Module_Status;
 
 /* Indicator LED */
 #define _IND_LED_PORT		GPIOB
@@ -125,8 +126,7 @@ extern void MX_USART5_UART_Init(void);
    ----------------------------------------------------------------------- 
 */
 
-extern void H05R0_Init(void);
-extern H05R0_Status H05R0_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst);
+
 
 
 /* -----------------------------------------------------------------------
