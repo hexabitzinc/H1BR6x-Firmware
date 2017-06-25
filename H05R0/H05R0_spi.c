@@ -40,73 +40,191 @@
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
 
+
+/* Private variables ---------------------------------------------------------*/
+uint32_t SpixTimeout = EVAL_SPIx_TIMEOUT_MAX;    /*<! Value of Timeout when SPI communication fails */
+SPI_HandleTypeDef hspi1;
+
+/* Private function prototypes -----------------------------------------------*/
+/* SPIx bus function */
+void              SPIx_FlushFifo(void);
+uint32_t          SPIx_Read(void);
+void              SPIx_Error (void);
+void              SPIx_MspInit(SPI_HandleTypeDef *hspi);
+
+
 /*----------------------------------------------------------------------------*/
 /* Configure SPI                                                              */
 /*----------------------------------------------------------------------------*/
 
-
-SPI_HandleTypeDef hspi1;
-
-/* SPI2 init function */
-void MX_SPI1_Init(void)
+/**
+  * @brief SPI1 Bus initialization
+  * @retval None
+  */
+void SPIx_Init(void)
 {
 
-//  hspi2.Instance = SPI2;
-//  hspi2.Init.Mode = SPI_MODE_MASTER;
-//  hspi2.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
-//  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-//  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-//  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-//  hspi2.Init.NSS = SPI_NSS_SOFT;
-//  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
-//  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
-//  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
-//  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-//  hspi2.Init.CRCPolynomial = 7;
-//  hspi2.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-//  hspi2.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
-//  HAL_SPI_Init(&hspi2);
+	/* SPI Config */
+	hspi1.Instance = SPI1;
+	/* SPI baudrate is set to 12 MHz (PCLK1/SPI_BaudRatePrescaler = 48/4 = 12 MHz) 
+	to verify these constraints:
+	HX8347D LCD SPI interface max baudrate is  50MHz for write and 6.66MHz for read
+	PCLK1 frequency is set to 48 MHz 
+	- SD card SPI interface max baudrate is 25MHz for write/read
+	*/
+	hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+	hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+	hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
+	hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+	hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+	hspi1.Init.CRCPolynomial = 7;
+	hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+	hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+	hspi1.Init.NSS = SPI_NSS_SOFT;
+	hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+	hspi1.Init.Mode = SPI_MODE_MASTER;
+	
+	SPIx_MspInit(&hspi1);
+	HAL_SPI_Init(&hspi1);
 
 }
 
-void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
+/**
+  * @brief SPI Read 4 bytes from device
+  * @retval Read data
+  */
+uint32_t SPIx_Read(void)
 {
+  HAL_StatusTypeDef status = HAL_OK;
+  uint32_t readvalue = 0x0;
+  uint32_t writevalue = 0xFFFFFFFF;
+  
+  status = HAL_SPI_TransmitReceive(&hspi1, (uint8_t*) &writevalue, (uint8_t*) &readvalue, 1, SpixTimeout);
 
-//  GPIO_InitTypeDef GPIO_InitStruct;
-//  if(spiHandle->Instance==SPI2)
-//  {
-//    /* Peripheral clock enable */
-//    __HAL_RCC_SPI2_CLK_ENABLE();
-//  
-//    /**SPI2 GPIO Configuration    
-//    PB13     ------> SPI2_SCK
-//    PB14     ------> SPI2_MISO 
-//    */
-//    GPIO_InitStruct.Pin = _DI_MISO_PIN|_DI_SCK_PIN;
-//    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-//    GPIO_InitStruct.Pull = GPIO_NOPULL;
-//    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-//    GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
-//    HAL_GPIO_Init(_DI_SCK_PORT, &GPIO_InitStruct);
-//}
-}
-
-void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
-{
-
-  if(spiHandle->Instance==SPI2)
+  /* Check the communication status */
+  if(status != HAL_OK)
   {
-//    /* Peripheral clock disable */
-//    __HAL_RCC_SPI2_CLK_DISABLE();
-//  
-//    /**SPI2 GPIO Configuration    
-//    PB13     ------> SPI2_SCK
-//    PB14     ------> SPI2_MISO 
-//    */
-//    HAL_GPIO_DeInit(_DI_SCK_PORT, _DI_MISO_PIN|_DI_SCK_PIN);
-
+    /* Execute user timeout callback */
+    SPIx_Error();
   }
-} 
+
+  return readvalue;
+}
+
+/**
+  * @brief SPI Write a byte to device
+  * @param DataIn: value to be written
+  * @param DataOut: read value
+  * @param DataLegnth: data length
+  * @retval None
+  */
+void SPIx_WriteReadData(const uint8_t *DataIn, uint8_t *DataOut, uint16_t DataLegnth)
+{
+  HAL_StatusTypeDef status = HAL_OK;
+
+  status = HAL_SPI_TransmitReceive(&hspi1, (uint8_t*) DataIn, DataOut, DataLegnth, SpixTimeout);
+    
+  /* Check the communication status */
+  if(status != HAL_OK)
+  {
+    /* Execute user timeout callback */
+    SPIx_Error();
+  }
+}
+
+/**
+  * @brief SPI Write a byte to device
+  * @param Value: value to be written
+  * @retval None
+  */
+void SPIx_Write(uint8_t Value)
+{
+  HAL_StatusTypeDef status = HAL_OK;
+  uint8_t data;
+
+  status = HAL_SPI_TransmitReceive(&hspi1, (uint8_t*) &Value, &data, 1, SpixTimeout);
+
+  /* Check the communication status */
+  if(status != HAL_OK)
+  {
+    /* Execute user timeout callback */
+    SPIx_Error();
+  }
+}
+
+/**
+  * @brief  SPIx_FlushFifo
+  * @retval None
+  */
+void SPIx_FlushFifo(void)
+{
+  HAL_SPIEx_FlushRxFifo(&hspi1);
+}
+
+/**
+  * @brief SPI error treatment function
+  * @retval None
+  */
+void SPIx_Error (void)
+{
+  /* De-initialize the SPI communication BUS */
+  HAL_SPI_DeInit(&hspi1);
+  
+  /* Re- Initiaize the SPI communication BUS */
+  SPIx_Init();
+}
+
+/**
+  * @brief SPI MSP Init
+  * @param hspi: SPI handle
+  * @retval None
+  */
+void SPIx_MspInit(SPI_HandleTypeDef *hspi)
+{
+  GPIO_InitTypeDef GPIO_InitStruct;
+
+  /* Enable SPI clock  */
+  EVAL_SPIx_CLK_ENABLE();
+  
+  /* enable EVAL_SPI gpio clocks */
+  EVAL_SPIx_SCK_GPIO_CLK_ENABLE();
+  EVAL_SPIx_MISO_GPIO_CLK_ENABLE();
+  EVAL_SPIx_MOSI_GPIO_CLK_ENABLE();
+  
+  /* configure SPI SCK */
+  GPIO_InitStruct.Pin       = EVAL_SPIx_SCK_PIN;
+  GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull      = GPIO_NOPULL;
+  GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
+  GPIO_InitStruct.Alternate = EVAL_SPIx_SCK_AF;
+  HAL_GPIO_Init(EVAL_SPIx_SCK_GPIO_PORT, &GPIO_InitStruct);
+  
+  /* configure SPI MOSI */
+  GPIO_InitStruct.Pin       = EVAL_SPIx_MOSI_PIN;
+  GPIO_InitStruct.Alternate = EVAL_SPIx_MOSI_AF;
+  HAL_GPIO_Init(EVAL_SPIx_MOSI_GPIO_PORT, &GPIO_InitStruct);
+  
+  /* configure SPI MISO  */
+  GPIO_InitStruct.Pin       = EVAL_SPIx_MISO_PIN;
+  GPIO_InitStruct.Alternate = EVAL_SPIx_MISO_AF;
+  HAL_GPIO_Init(EVAL_SPIx_MISO_GPIO_PORT, &GPIO_InitStruct);
+  
+  /* Set PB.2 as Out PP, as direction pin for MOSI */
+  GPIO_InitStruct.Pin       = EVAL_SPIx_MOSI_DIR_PIN;
+  GPIO_InitStruct.Speed     = GPIO_SPEED_MEDIUM;
+  GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull      = GPIO_NOPULL;  
+  HAL_GPIO_Init(EVAL_SPIx_MOSI_DIR_GPIO_PORT, &GPIO_InitStruct);
+  
+  /* MOSI DIRECTION as output */
+  HAL_GPIO_WritePin(EVAL_SPIx_MOSI_DIR_GPIO_PORT, EVAL_SPIx_MOSI_DIR_PIN, GPIO_PIN_SET);
+  
+  /* Force the SPI peripheral clock reset */
+  EVAL_SPIx_FORCE_RESET();
+
+  /* Release the SPI peripheral clock reset */
+  EVAL_SPIx_RELEASE_RESET();
+}
 
 
 

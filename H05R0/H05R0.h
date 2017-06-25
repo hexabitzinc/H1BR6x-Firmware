@@ -13,7 +13,15 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
-
+#include "H05R0_uart.h"	
+#include "H05R0_gpio.h"	
+#include "H05R0_dma.h"		
+#include "H05R0_spi.h"	
+#include "H05R0_sd_spi.h"	
+#include "ff_gen_drv.h"
+#include "sd_diskio.h"
+	
+	
 /* Exported definitions -------------------------------------------------------*/
 
 #define	modulePN		_H05R0
@@ -91,7 +99,7 @@ typedef enum
 #define _IND_LED_PIN		GPIO_PIN_14
 
 /* Exported variables */
-
+//extern Diskio_drvTypeDef  SD_Driver;
 
 
 /* Export UART variables */

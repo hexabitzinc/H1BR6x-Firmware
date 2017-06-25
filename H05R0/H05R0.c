@@ -49,7 +49,6 @@ UART_HandleTypeDef huart5;
 */
 void Module_Init(void)
 {
-	GPIO_InitTypeDef GPIO_InitStruct;
 	
 	/* Array ports */
   MX_USART1_UART_Init();
@@ -58,10 +57,8 @@ void Module_Init(void)
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
 	
-	/* SPI */
-	MX_SPI1_Init();
-	
-	/* GPIO - uSD detect */
+	/* uSD - GPIO and SPI */
+	SD_IO_Init();
 
   
 }

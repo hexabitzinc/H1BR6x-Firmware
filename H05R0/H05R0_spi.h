@@ -49,11 +49,57 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f0xx_hal.h"
 
-
+	 
+/** Exported variables
+*/ 
+	 
 extern SPI_HandleTypeDef hspi1;
-extern void Error_Handler(void);
-void MX_SPI1_Init(void);
 
+	 
+/**
+  * @brief  Definition for SPI Interface pins (SPI1 used)
+  */
+#define EVAL_SPIx                        SPI1
+#define EVAL_SPIx_CLK_ENABLE()           __HAL_RCC_SPI1_CLK_ENABLE()
+#define EVAL_SPIx_CLK_DISABLE()          __HAL_RCC_SPI1_CLK_DISABLE()
+#define EVAL_SPIx_FORCE_RESET()          __HAL_RCC_SPI1_FORCE_RESET()
+#define EVAL_SPIx_RELEASE_RESET()        __HAL_RCC_SPI1_RELEASE_RESET()
+
+#define EVAL_SPIx_SCK_PIN                GPIO_PIN_3              /* PB.03 */
+#define EVAL_SPIx_SCK_GPIO_PORT          GPIOB                   /* GPIOB */
+#define EVAL_SPIx_SCK_GPIO_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
+#define EVAL_SPIx_SCK_GPIO_CLK_DISABLE() __HAL_RCC_GPIOB_CLK_DISABLE()
+#define EVAL_SPIx_SCK_AF                 GPIO_AF0_SPI1
+
+#define EVAL_SPIx_MISO_PIN               GPIO_PIN_14             /* PE.14 */
+#define EVAL_SPIx_MISO_GPIO_PORT         GPIOE                   /* GPIOE */
+#define EVAL_SPIx_MISO_GPIO_CLK_ENABLE() __HAL_RCC_GPIOE_CLK_ENABLE()
+#define EVAL_SPIx_MISO_GPIO_CLK_DISABLE() __HAL_RCC_GPIOE_CLK_DISABLE()
+#define EVAL_SPIx_MISO_AF                GPIO_AF1_SPI1
+
+#define EVAL_SPIx_MOSI_PIN               GPIO_PIN_15             /* PE.15 */
+#define EVAL_SPIx_MOSI_GPIO_PORT         GPIOE                   /* GPIOE */
+#define EVAL_SPIx_MOSI_GPIO_CLK_ENABLE() __HAL_RCC_GPIOE_CLK_ENABLE()
+#define EVAL_SPIx_MOSI_GPIO_CLK_DISABLE() __HAL_RCC_GPIOE_CLK_DISABLE()
+#define EVAL_SPIx_MOSI_AF                GPIO_AF1_SPI1
+
+#define EVAL_SPIx_MOSI_DIR_PIN           GPIO_PIN_2             /* PB.02 */
+#define EVAL_SPIx_MOSI_DIR_GPIO_PORT     GPIOB                   /* GPIOB */
+#define EVAL_SPIx_MOSI_DIR_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define EVAL_SPIx_MOSI_DIR_GPIO_CLK_DISABLE() __HAL_RCC_GPIOB_CLK_DISABLE()
+
+/* Maximum Timeout values for flags waiting loops. These timeouts are not based
+   on accurate values, they just guarantee that the application will not remain
+   stuck if the SPI communication is corrupted.
+   You may modify these timeout values depending on CPU frequency and application
+   conditions (interrupts routines ...). */   
+#define EVAL_SPIx_TIMEOUT_MAX                 1000
+
+/** Exported functions
+*/ 
+extern void SPIx_Init(void);
+extern void SPIx_Write(uint8_t Value);
+extern void SPIx_WriteReadData(const uint8_t *DataIn, uint8_t *DataOut, uint16_t DataLegnth);
 
 
 #ifdef __cplusplus
