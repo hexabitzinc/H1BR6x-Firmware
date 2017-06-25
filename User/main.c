@@ -101,6 +101,7 @@ void FrontEndTask(void * argument)
   uint32_t byteswritten, bytesread;                     /* File write/read counts */
   uint8_t wtext[] = "This is STM32 working with FatFs"; /* File write buffer */
   uint8_t rtext[100];     
+	BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
 	
   /*##-1- Link the micro SD disk I/O driver ##################################*/
   if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
@@ -115,7 +116,7 @@ void FrontEndTask(void * argument)
     {
       /*##-3- Create a FAT file system (format) on the logical drive #########*/
       /* WARNING: Formatting the uSD card will delete all content on the device */
-      if(f_mkfs((TCHAR const*)SDPath, 0, 0) != FR_OK)
+      if(f_mkfs((TCHAR const*)SDPath, FM_FAT32, 0,  work, sizeof(work)) != FR_OK)
       {
         /* FatFs Format Error */
         //Error_Handler();

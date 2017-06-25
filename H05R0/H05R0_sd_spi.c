@@ -242,7 +242,7 @@ __IO uint8_t SdStatus = SD_NOT_PRESENT;
       0 :  Standard capacity
       1 : High capacity
 */
-uint16_t flag_SDHC = 0; 
+uint16_t flag_SDHC = 1; 
 
 /**
 * @}
@@ -329,14 +329,16 @@ uint8_t BSP_SD_GetCardInfo(SD_CardInfo *pCardInfo)
   if(flag_SDHC == 1 )
   {
     pCardInfo->CardBlockSize = 512;
-    pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * pCardInfo->CardBlockSize;
+    //pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * pCardInfo->CardBlockSize;
+		pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * (pCardInfo->CardBlockSize * 1024);
   }
   else
   {
     pCardInfo->CardCapacity = (pCardInfo->Csd.version.v1.DeviceSize + 1) ;
     pCardInfo->CardCapacity *= (1 << (pCardInfo->Csd.version.v1.DeviceSizeMul + 2));
     pCardInfo->CardBlockSize = 1 << (pCardInfo->Csd.RdBlockLen);
-    pCardInfo->CardCapacity *= pCardInfo->CardBlockSize;
+    //pCardInfo->CardCapacity *= pCardInfo->CardBlockSize;
+		pCardInfo->CardCapacity *= (pCardInfo->CardBlockSize * 1024);
   }
   
   return status;
