@@ -42,7 +42,8 @@
 /* Include a predefined topology here */
 //#include "topology_ex.h"
 
-extern Diskio_drvTypeDef  SD_Driver;
+
+UBaseType_t uxHighWaterMark;
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -103,6 +104,12 @@ void FrontEndTask(void * argument)
   uint8_t rtext[100];     
 	BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
 	
+	
+	
+	/* Inspect our own high water mark on entering the task. */
+  uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+	
+	
   /*##-1- Link the micro SD disk I/O driver ##################################*/
   if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
   {
@@ -114,15 +121,20 @@ void FrontEndTask(void * argument)
     }
     else
     {
-      /*##-3- Create a FAT file system (format) on the logical drive #########*/
-      /* WARNING: Formatting the uSD card will delete all content on the device */
-      if(f_mkfs((TCHAR const*)SDPath, FM_FAT32, 0,  work, sizeof(work)) != FR_OK)
-      {
-        /* FatFs Format Error */
-        //Error_Handler();
-      }
-      else
-      {       
+			/* Inspect our own high water mark on entering the task. */
+      uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+			
+//      /*##-3- Create a FAT file system (format) on the logical drive #########*/
+//      /* WARNING: Formatting the uSD card will delete all content on the device */
+//      if(f_mkfs((TCHAR const*)SDPath, FM_FAT32, 0,  work, sizeof(work)) != FR_OK)
+//      {
+//        /* FatFs Format Error */
+//        //Error_Handler();
+//      }
+//      else
+//      {
+
+				
         /*##-4- Create and Open a new text file object with write access #####*/
         if(f_open(&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
         {
@@ -139,7 +151,10 @@ void FrontEndTask(void * argument)
           {
             //Error_Handler();
           }
-          
+					
+					/* Inspect our own high water mark on entering the task. */
+					uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );    
+					
           if((byteswritten == 0) || (res != FR_OK))
           {
             /* 'STM32.TXT' file Write or EOF Error */
@@ -182,7 +197,7 @@ void FrontEndTask(void * argument)
               }
             }
           }
-        }
+//        }
       }
     }
   }

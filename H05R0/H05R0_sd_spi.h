@@ -161,26 +161,6 @@ typedef struct
 /** Exported Constants
   */ 
 
-/* Chip Select macro definition */
-#define SD_CS_LOW()                     HAL_GPIO_WritePin(SD_CS_GPIO_PORT, SD_CS_PIN, GPIO_PIN_RESET)
-#define SD_CS_HIGH()                    HAL_GPIO_WritePin(SD_CS_GPIO_PORT, SD_CS_PIN, GPIO_PIN_SET)  
-/**
-  * @brief SD card Control pin  
-  */
-#define SD_CS_PIN                       GPIO_PIN_2              /* PF.2 */
-#define SD_CS_GPIO_PORT                 GPIOF                   /* GPIOF */
-#define SD_CS_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOF_CLK_ENABLE()
-#define SD_CS_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOF_CLK_DISABLE()
-
-/**
-  * @brief  SD Detect Interface pins
-  */
-#define SD_DETECT_PIN                   GPIO_PIN_15             /* PB.15 */
-#define SD_DETECT_GPIO_PORT             GPIOB                   /* GPIOB */
-#define SD_DETECT_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOB_CLK_ENABLE()
-#define SD_DETECT_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOB_CLK_DISABLE()
-#define SD_DETECT_EXTI_IRQn             EXTI4_15_IRQn
-
 
 /**
   * @brief  Block Size

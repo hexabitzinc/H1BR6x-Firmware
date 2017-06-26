@@ -47,7 +47,7 @@ extern xTaskHandle xCommandConsoleTask;
 extern TaskHandle_t FrontEndTaskHandle;
 extern void NotifyMessagingTaskFromISR(uint8_t port);
 
-
+extern UBaseType_t uxHighWaterMark;
 
 /******************************************************************************/
 /*            Cortex-M0 Processor Interruption and Exception Handlers         */ 
@@ -286,6 +286,9 @@ void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName 
 	( void ) pcTaskName;
 	( void ) pxTask;
 
+	
+	uxHighWaterMark = uxTaskGetStackHighWaterMark( FrontEndTaskHandle );
+	
 	/* Run time stack overflow checking is performed if
 	configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2.  This hook
 	function is called if a stack overflow is detected. */

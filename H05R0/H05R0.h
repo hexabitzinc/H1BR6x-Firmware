@@ -85,6 +85,47 @@
 
 /* Module-specific Definitions */
 
+#define EVAL_SPIx                     	SPI1
+#define SPIx_CLK_ENABLE()           		__HAL_RCC_SPI1_CLK_ENABLE()
+#define SPIx_CLK_DISABLE()          		__HAL_RCC_SPI1_CLK_DISABLE()
+#define SPIx_FORCE_RESET()          		__HAL_RCC_SPI1_FORCE_RESET()
+#define SPIx_RELEASE_RESET()        		__HAL_RCC_SPI1_RELEASE_RESET()
+	
+#define SPIx_SCK_PIN                		GPIO_PIN_5              /* PA.05 */
+#define SPIx_SCK_GPIO_PORT          		GPIOA                   
+#define SPIx_SCK_GPIO_CLK_ENABLE()  		__HAL_RCC_GPIOA_CLK_ENABLE()
+#define SPIx_SCK_GPIO_CLK_DISABLE() 		__HAL_RCC_GPIOA_CLK_DISABLE()
+#define SPIx_SCK_AF                 		GPIO_AF0_SPI1
+	
+#define SPIx_MISO_PIN               		GPIO_PIN_6              /* PA.06 */
+#define SPIx_MISO_GPIO_PORT         		GPIOA                  
+#define SPIx_MISO_GPIO_CLK_ENABLE() 		__HAL_RCC_GPIOA_CLK_ENABLE()
+#define SPIx_MISO_GPIO_CLK_DISABLE()		__HAL_RCC_GPIOA_CLK_DISABLE()
+#define SPIx_MISO_AF                		GPIO_AF0_SPI1
+	
+#define SPIx_MOSI_PIN               		GPIO_PIN_7              /* PA.07 */
+#define SPIx_MOSI_GPIO_PORT         		GPIOA                   
+#define SPIx_MOSI_GPIO_CLK_ENABLE() 		__HAL_RCC_GPIOA_CLK_ENABLE()
+#define SPIx_MOSI_GPIO_CLK_DISABLE()		__HAL_RCC_GPIOA_CLK_DISABLE()
+#define SPIx_MOSI_AF                		GPIO_AF0_SPI1
+
+/* Chip Select macro definition */
+#define SD_CS_LOW()                     HAL_GPIO_WritePin(SD_CS_GPIO_PORT, SD_CS_PIN, GPIO_PIN_RESET)
+#define SD_CS_HIGH()                    HAL_GPIO_WritePin(SD_CS_GPIO_PORT, SD_CS_PIN, GPIO_PIN_SET)  
+
+/* SD card Control pin */
+#define SD_CS_PIN                       GPIO_PIN_4              /* PA.04 */
+#define SD_CS_GPIO_PORT                 GPIOA                  
+#define SD_CS_GPIO_CLK_ENABLE()         __HAL_RCC_GPIOA_CLK_ENABLE()
+#define SD_CS_GPIO_CLK_DISABLE()        __HAL_RCC_GPIOA_CLK_DISABLE()
+
+/* SD Detect Interface pins */
+#define SD_DETECT_PIN                   GPIO_PIN_0              /* PB.0 */
+#define SD_DETECT_GPIO_PORT             GPIOB                   
+#define SD_DETECT_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOB_CLK_ENABLE()
+#define SD_DETECT_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOB_CLK_DISABLE()
+#define SD_DETECT_EXTI_IRQn             EXTI0_1_IRQn
+
 
 /* H05R0_Status Type Definition */  
 typedef enum 

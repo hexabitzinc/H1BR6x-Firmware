@@ -184,46 +184,36 @@ void SPIx_MspInit(SPI_HandleTypeDef *hspi)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* Enable SPI clock  */
-  EVAL_SPIx_CLK_ENABLE();
+  SPIx_CLK_ENABLE();
   
   /* enable EVAL_SPI gpio clocks */
-  EVAL_SPIx_SCK_GPIO_CLK_ENABLE();
-  EVAL_SPIx_MISO_GPIO_CLK_ENABLE();
-  EVAL_SPIx_MOSI_GPIO_CLK_ENABLE();
+  SPIx_SCK_GPIO_CLK_ENABLE();
+  SPIx_MISO_GPIO_CLK_ENABLE();
+  SPIx_MOSI_GPIO_CLK_ENABLE();
   
   /* configure SPI SCK */
-  GPIO_InitStruct.Pin       = EVAL_SPIx_SCK_PIN;
+  GPIO_InitStruct.Pin       = SPIx_SCK_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_NOPULL;
   GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = EVAL_SPIx_SCK_AF;
-  HAL_GPIO_Init(EVAL_SPIx_SCK_GPIO_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Alternate = SPIx_SCK_AF;
+  HAL_GPIO_Init(SPIx_SCK_GPIO_PORT, &GPIO_InitStruct);
   
   /* configure SPI MOSI */
-  GPIO_InitStruct.Pin       = EVAL_SPIx_MOSI_PIN;
-  GPIO_InitStruct.Alternate = EVAL_SPIx_MOSI_AF;
-  HAL_GPIO_Init(EVAL_SPIx_MOSI_GPIO_PORT, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin       = SPIx_MOSI_PIN;
+  GPIO_InitStruct.Alternate = SPIx_MOSI_AF;
+  HAL_GPIO_Init(SPIx_MOSI_GPIO_PORT, &GPIO_InitStruct);
   
   /* configure SPI MISO  */
-  GPIO_InitStruct.Pin       = EVAL_SPIx_MISO_PIN;
-  GPIO_InitStruct.Alternate = EVAL_SPIx_MISO_AF;
-  HAL_GPIO_Init(EVAL_SPIx_MISO_GPIO_PORT, &GPIO_InitStruct);
-  
-  /* Set PB.2 as Out PP, as direction pin for MOSI */
-  GPIO_InitStruct.Pin       = EVAL_SPIx_MOSI_DIR_PIN;
-  GPIO_InitStruct.Speed     = GPIO_SPEED_MEDIUM;
-  GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull      = GPIO_NOPULL;  
-  HAL_GPIO_Init(EVAL_SPIx_MOSI_DIR_GPIO_PORT, &GPIO_InitStruct);
-  
-  /* MOSI DIRECTION as output */
-  HAL_GPIO_WritePin(EVAL_SPIx_MOSI_DIR_GPIO_PORT, EVAL_SPIx_MOSI_DIR_PIN, GPIO_PIN_SET);
+  GPIO_InitStruct.Pin       = SPIx_MISO_PIN;
+  GPIO_InitStruct.Alternate = SPIx_MISO_AF;
+  HAL_GPIO_Init(SPIx_MISO_GPIO_PORT, &GPIO_InitStruct);
   
   /* Force the SPI peripheral clock reset */
-  EVAL_SPIx_FORCE_RESET();
+  SPIx_FORCE_RESET();
 
   /* Release the SPI peripheral clock reset */
-  EVAL_SPIx_RELEASE_RESET();
+  SPIx_RELEASE_RESET();
 }
 
 

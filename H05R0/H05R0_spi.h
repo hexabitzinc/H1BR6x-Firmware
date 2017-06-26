@@ -55,38 +55,6 @@
 	 
 extern SPI_HandleTypeDef hspi1;
 
-	 
-/**
-  * @brief  Definition for SPI Interface pins (SPI1 used)
-  */
-#define EVAL_SPIx                        SPI1
-#define EVAL_SPIx_CLK_ENABLE()           __HAL_RCC_SPI1_CLK_ENABLE()
-#define EVAL_SPIx_CLK_DISABLE()          __HAL_RCC_SPI1_CLK_DISABLE()
-#define EVAL_SPIx_FORCE_RESET()          __HAL_RCC_SPI1_FORCE_RESET()
-#define EVAL_SPIx_RELEASE_RESET()        __HAL_RCC_SPI1_RELEASE_RESET()
-
-#define EVAL_SPIx_SCK_PIN                GPIO_PIN_3              /* PB.03 */
-#define EVAL_SPIx_SCK_GPIO_PORT          GPIOB                   /* GPIOB */
-#define EVAL_SPIx_SCK_GPIO_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
-#define EVAL_SPIx_SCK_GPIO_CLK_DISABLE() __HAL_RCC_GPIOB_CLK_DISABLE()
-#define EVAL_SPIx_SCK_AF                 GPIO_AF0_SPI1
-
-#define EVAL_SPIx_MISO_PIN               GPIO_PIN_14             /* PE.14 */
-#define EVAL_SPIx_MISO_GPIO_PORT         GPIOE                   /* GPIOE */
-#define EVAL_SPIx_MISO_GPIO_CLK_ENABLE() __HAL_RCC_GPIOE_CLK_ENABLE()
-#define EVAL_SPIx_MISO_GPIO_CLK_DISABLE() __HAL_RCC_GPIOE_CLK_DISABLE()
-#define EVAL_SPIx_MISO_AF                GPIO_AF1_SPI1
-
-#define EVAL_SPIx_MOSI_PIN               GPIO_PIN_15             /* PE.15 */
-#define EVAL_SPIx_MOSI_GPIO_PORT         GPIOE                   /* GPIOE */
-#define EVAL_SPIx_MOSI_GPIO_CLK_ENABLE() __HAL_RCC_GPIOE_CLK_ENABLE()
-#define EVAL_SPIx_MOSI_GPIO_CLK_DISABLE() __HAL_RCC_GPIOE_CLK_DISABLE()
-#define EVAL_SPIx_MOSI_AF                GPIO_AF1_SPI1
-
-#define EVAL_SPIx_MOSI_DIR_PIN           GPIO_PIN_2             /* PB.02 */
-#define EVAL_SPIx_MOSI_DIR_GPIO_PORT     GPIOB                   /* GPIOB */
-#define EVAL_SPIx_MOSI_DIR_GPIO_CLK_ENABLE() __HAL_RCC_GPIOB_CLK_ENABLE()
-#define EVAL_SPIx_MOSI_DIR_GPIO_CLK_DISABLE() __HAL_RCC_GPIOB_CLK_DISABLE()
 
 /* Maximum Timeout values for flags waiting loops. These timeouts are not based
    on accurate values, they just guarantee that the application will not remain
