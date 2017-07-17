@@ -49,6 +49,7 @@ UART_HandleTypeDef huart5;
 */
 void Module_Init(void)
 {
+	SD_CardInfo CardInfo;
 	
 	/* Array ports */
   MX_USART1_UART_Init();
@@ -58,8 +59,11 @@ void Module_Init(void)
   MX_USART5_UART_Init();
 	
 	/* uSD - GPIO and SPI */
-	SD_IO_Init();
+	BSP_SD_Init();
+	//SD_IO_Init();
 	
+	/* Get the uSD size and info */
+	BSP_SD_GetCardInfo(&CardInfo);
   
 }
 /*-----------------------------------------------------------*/

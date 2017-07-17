@@ -102,7 +102,7 @@ void FrontEndTask(void * argument)
   uint32_t byteswritten, bytesread;                     /* File write/read counts */
   uint8_t wtext[] = "This is STM32 working with FatFs"; /* File write buffer */
   uint8_t rtext[100];     
-	BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
+	//BYTE work[FF_MAX_SS]; /* Work area (larger is better for processing time) */
 	
 	
 	
@@ -172,6 +172,9 @@ void FrontEndTask(void * argument)
             {
               /*##-8- Read data from the text file ###########################*/
               res = f_read(&MyFile, rtext, sizeof(rtext), (UINT*)&bytesread);
+
+							/* Inspect our own high water mark on entering the task. */
+							uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );    
               
               if((bytesread == 0) || (res != FR_OK))
               {
@@ -182,7 +185,11 @@ void FrontEndTask(void * argument)
               {
                 /*##-9- Close the open text file #############################*/
                 f_close(&MyFile);
-                
+								
+								/* Inspect our own high water mark on entering the task. */
+								uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );    
+
+								
                 /*##-10- Compare read data with the expected data ############*/
                 if((bytesread != byteswritten))
                 {                

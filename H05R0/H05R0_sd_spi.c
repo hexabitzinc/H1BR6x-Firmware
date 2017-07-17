@@ -239,8 +239,8 @@ typedef enum
 __IO uint8_t SdStatus = SD_NOT_PRESENT;
 
 /* flag_SDHC :
-      0 :  Standard capacity
-      1 : High capacity
+      0 : Standard capacity
+      1 : High capacity	>= 4GB
 */
 uint16_t flag_SDHC = 1; 
 
@@ -329,16 +329,14 @@ uint8_t BSP_SD_GetCardInfo(SD_CardInfo *pCardInfo)
   if(flag_SDHC == 1 )
   {
     pCardInfo->CardBlockSize = 512;
-    //pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * pCardInfo->CardBlockSize;
-		pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * (pCardInfo->CardBlockSize * 1024);
+    pCardInfo->CardCapacity = (pCardInfo->Csd.version.v2.DeviceSize + 1) * pCardInfo->CardBlockSize;
   }
   else
   {
     pCardInfo->CardCapacity = (pCardInfo->Csd.version.v1.DeviceSize + 1) ;
     pCardInfo->CardCapacity *= (1 << (pCardInfo->Csd.version.v1.DeviceSizeMul + 2));
     pCardInfo->CardBlockSize = 1 << (pCardInfo->Csd.RdBlockLen);
-    //pCardInfo->CardCapacity *= pCardInfo->CardBlockSize;
-		pCardInfo->CardCapacity *= (pCardInfo->CardBlockSize * 1024);
+    pCardInfo->CardCapacity *= pCardInfo->CardBlockSize;
   }
   
   return status;
