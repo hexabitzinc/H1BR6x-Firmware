@@ -126,22 +126,58 @@
 #define SD_DETECT_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOB_CLK_DISABLE()
 #define SD_DETECT_EXTI_IRQn             EXTI0_1_IRQn
 
+/* Indicator LED */
+#define _IND_LED_PORT		GPIOB
+#define _IND_LED_PIN		GPIO_PIN_14
+
+#define MAX_LOGS					10
+#define MAX_LOG_VARS			30
 
 /* H05R0_Status Type Definition */  
 typedef enum 
 {
   H05R0_OK = 0,
 	H05R0_ERR_UnknownMessage = 1,
+	H05R0_ERR_LogNameExists = 2,
+	H05R0_ERR_WrongParams,
+	H05R0_ERR_SD,
+	H05R0_ERR_MaxLogs,
+	H05R0_ERR_MaxLogVars,
+	H05R0_ERR_LogDoesNotExist,
 	H05R0_ERROR = 255
 } Module_Status;
 
-/* Indicator LED */
-#define _IND_LED_PORT		GPIOB
-#define _IND_LED_PIN		GPIO_PIN_14
+/* Log enuemrations */
+typedef enum { RATE = 1, EVENT } logType_t;
+typedef enum { FMT_SPACE = 1, FMT_TAB, FMT_COMMA } columnFormat_t;
+typedef enum { FMT_NONE = 0, FMT_SAMPLE, FMT_TIME } indexColumn_t;
+typedef enum { DELETE_ALL = 0, KEEP_ON_DISK } options_t;
+
+/* Log Struct Type Definition */  
+typedef struct
+{
+	const char* name;
+	uint8_t type; 
+	float length; 
+	columnFormat_t columnFormat; 
+	indexColumn_t indexColumn;
+	const char* indexColumnLabel;
+} 
+log_t;
+
+/* Log Column Struct Type Definition */  
+typedef struct
+{
+	uint8_t logIndex;
+	const char* varLabel;
+	uint8_t port;
+	uint32_t memory;
+} 
+logVar_t;
 
 /* Exported variables */
-//extern Diskio_drvTypeDef  SD_Driver;
-
+extern log_t logs[MAX_LOGS];
+extern logVar_t logVars[MAX_LOG_VARS];
 
 /* Export UART variables */
 extern UART_HandleTypeDef huart1;
@@ -175,7 +211,16 @@ extern void MX_USART5_UART_Init(void);
    ----------------------------------------------------------------------- 
 */
 
-
+extern Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, columnFormat_t columnFormat, indexColumn_t indexColumn,\
+	const char* indexColumnLabel);
+extern Module_Status LogPort(const char* logName, uint8_t source, const char* ColumnLabel);
+extern Module_Status LogButton(const char* logName, uint8_t source, const char* ColumnLabel);
+extern Module_Status LogMemory(const char* logName, uint32_t memory, const char* ColumnLabel);
+extern Module_Status StartLog(const char* logName);
+extern Module_Status StopLog(const char* logName);
+extern Module_Status PauseLog(const char* logName);
+extern Module_Status ResumeLog(const char* logName);
+extern Module_Status DeleteLog(const char* logName, options_t options);
 
 
 /* -----------------------------------------------------------------------
