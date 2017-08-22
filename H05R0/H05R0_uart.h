@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * File Name          : H04R0_uart.h
+  * File Name          : H05R0_uart.h
   * Description        : This file provides code for the configuration
   *                      of the USART instances.
   ******************************************************************************
@@ -33,7 +33,7 @@
   */
 	
 /*
-		MODIFIED by Hexabitz for BitzOS (BOS) V0.0.0 - Copyright (C) 2016 Hexabitz
+		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.0 - Copyright (C) 2017 Hexabitz
     All rights reserved
 */
 

@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    H04R0_it.c
+  * @file    H05R0_it.c
   * @brief   Interrupt Service Routines.
   ******************************************************************************
   *
@@ -32,7 +32,7 @@
   */
 	
 /*
-		MODIFIED by Hexabitz for BitzOS (BOS) V0.0.0 - Copyright (C) 2016 Hexabitz
+		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.0 - Copyright (C) 2017 Hexabitz
     All rights reserved
 */
 
