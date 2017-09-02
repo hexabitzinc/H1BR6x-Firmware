@@ -78,7 +78,7 @@ void Module_Init(void)
 	BSP_SD_GetCardInfo(&CardInfo);
 	
 	/* Create the logging task */
-	xTaskCreate(LogTask, (const char *) "LogTask", 2500, NULL, osPriorityNormal, &LogTaskHandle);
+	xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);
 	
   
 }
@@ -143,6 +143,7 @@ void LogTask(void * argument)
 			for(;;)
 			{
 				
+				
 			}			
 		
 		}
@@ -171,7 +172,7 @@ void LogTask(void * argument)
 Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, columnFormat_t columnFormat, indexColumn_t indexColumn,\
 	const char* indexColumnLabel)
 {
-	FRESULT res; 
+	FRESULT res; char name[15] = {0};
 	uint8_t i=0;
 	
 	/* Check if log already exists */
@@ -195,8 +196,10 @@ Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, col
   {
 		if(logs[i].name == 0)
 		{
+			/* Append log name with extension */
+			strcpy((char *)name, logName); strncat((char *)name, ".TXT", 4);
 			/* Check if file exists on disk */
-			res = f_open(&MyFile, logName, FA_CREATE_NEW);
+			res = f_open(&MyFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
 			if(res == FR_EXIST)
 				return H05R0_ERR_LogNameExists;
 			else if (res != FR_OK)
@@ -211,15 +214,19 @@ Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, col
 			logs[i].indexColumnLabel = indexColumnLabel;
 			
 			/* Write log header */
-			sprintf( ( char * ) buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, modulePNstring[4]);
-			res = f_write(&MyFile, logHeaderText1, sizeof(logHeaderText1), (void *)&byteswritten);
+			strncpy(name, modulePNstring[4], 5); name[5] = 0;				// Copy only module PN
+			sprintf( ( char * ) buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, name);
+			res = f_write(&MyFile, buffer, sizeof(logHeaderText1), (void *)&byteswritten);
+			memset(buffer, 0, byteswritten);
 			if(type == RATE) {
 				sprintf( ( char * ) buffer, logHeaderText2, lengthrate);
-				res = f_write(&MyFile, logHeaderText2, sizeof(logHeaderText2), (void *)&byteswritten);				
+				res = f_write(&MyFile, buffer, sizeof(logHeaderText2), (void *)&byteswritten);				
 			} else if (type == EVENT) {
-				sprintf( ( char * ) buffer, logHeaderText3, lengthrate);
-				res = f_write(&MyFile, logHeaderText3, sizeof(logHeaderText3), (void *)&byteswritten);	
+				sprintf( ( char * ) buffer, logHeaderText3, (uint32_t)lengthrate);
+				res = f_write(&MyFile, buffer, sizeof(logHeaderText3), (void *)&byteswritten);	
 			}
+			memset(buffer, 0, byteswritten);
+			f_close(&MyFile);
 			
 			return H05R0_OK;
 		}

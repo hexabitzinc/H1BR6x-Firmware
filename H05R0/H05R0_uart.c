@@ -43,7 +43,6 @@
 
 FlagStatus UartRxReady = RESET;
 FlagStatus UartTxReady = RESET;
-uint8_t PcPort = 0;
 
 
 /* USART1 init function */
@@ -430,5 +429,17 @@ HAL_StatusTypeDef writePxITMutex(uint8_t port, char *buffer, uint16_t n, uint32_
 	return result;
 }
 
+/* --- Update baudrate for this port --- 
+*/
+BOS_Status UpdateBaudrate(uint8_t port, uint32_t baudrate)
+{
+	BOS_Status result = BOS_OK; 
+	UART_HandleTypeDef *huart = GetUart(port);
+
+	huart->Init.BaudRate = baudrate;
+	HAL_UART_Init(huart);
+	
+	return result;
+}
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
