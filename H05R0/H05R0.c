@@ -40,12 +40,12 @@ uint8_t buffer[100];
 char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n\r";
 char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n\r";
 char logHeaderText3[] = "Log type: Event @ %d events max\n\n\r";
-
+uint16_t openLogs, activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
 
 /* Private function prototypes -----------------------------------------------*/	
 void LogTask(void * argument);
-
+uint8_t CheckLogVarEvent(logVar_t *var);
 
 /* Create CLI commands --------------------------------------------------------*/
 
@@ -71,8 +71,11 @@ void Module_Init(void)
   MX_USART5_UART_Init();
 	
 	/* uSD - GPIO and SPI */
-	BSP_SD_Init();
-	//SD_IO_Init();
+	if (BSP_SD_Init() == MSD_ERROR)
+	{
+		/* No SD card. Insert SD card and reboot */
+		while(1) { IND_blink(500); HAL_Delay(500); };		
+	}	
 	
 	/* Get the uSD size and info */
 	BSP_SD_GetCardInfo(&CardInfo);
@@ -126,34 +129,179 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 /* --- Logging task. 
 */
 void LogTask(void * argument)
-{
+{	
+	uint8_t i, j;
+	FRESULT res; char name[15] = {0}; 	
+	
   /* Link the micro SD disk I/O driver */
   if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
   {
     /* Mount the default drive */
     if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
     {
-      /* FatFs Initialization Error */
-      //Error_Handler();
+      /* SD card malfunction. Re-insert the card and reboot */
+			while(1) { RTOS_IND_blink(500); osDelay(500); };
     }
     else
-    {
-			
+    {			
 			/* Infinite loop */
 			for(;;)
 			{
 				
+				/* Check all active logs */
+				for( j=0 ; j<MAX_LOGS ; j++)
+				{	
+					if ( (activeLogs >> j) & 0x01 )
+					{					
+						/* Open this log file if it's closed (and close open one) */
+						if ( ((openLogs >> j) & 0x01) == 0 )
+						{
+							/* Close currently open log */
+							f_close(&MyFile);
+							/* Append log name with extension */
+							strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
+							/* Open this log */
+							res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
+							if (res != FR_OK)	break;	
+							openLogs = (0x01 << j);
+						}						
+						
+						/* Check all registered variables */
+						for( i=0 ; i<MAX_LOG_VARS ; i++)
+						{
+							if ( (logs[j].type == RATE) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
+							{			
+								/* Write index */
+								if (logs[j].delimiterFormat == FMT_TIME)
+								{
+									;
+								}
+								else if (logs[j].delimiterFormat == FMT_SAMPLE)
+								{
+									sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
+									f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
+									memset(buffer, 0, byteswritten);
+									/* Write delimiter */
+									
+								}
+								
+								/* Write variable value */
+								switch (logVars[i].type)
+								{
+									case PORT_DIGITAL:
+										//sprintf( ( char * ) buffer, "%d", HAL_GPIO_ReadPin());
+										//f_write(&MyFile, buffer, 1, (void *)&byteswritten);	
+										break;
+									
+									case PORT_BUTTON:
+										switch (button[logVars[i].source].state)
+										{
+											case OFF:	f_write(&MyFile, "OFF", 3, (void *)&byteswritten); break;
+											case ON:	f_write(&MyFile, "ON", 2, (void *)&byteswritten); break;
+											case OPEN:	f_write(&MyFile, "OPEN", 4, (void *)&byteswritten); break;
+											case CLOSED:	f_write(&MyFile, "CLOSED", 6, (void *)&byteswritten); break;
+											case CLICKED:	f_write(&MyFile, "CLICKED", 7, (void *)&byteswritten); break;
+											case DBL_CLICKED:	f_write(&MyFile, "DBL_CLICKED", 11, (void *)&byteswritten); break;
+											case PRESSED:	f_write(&MyFile, "PRESSED", 7, (void *)&byteswritten); break;
+											case RELEASED:	f_write(&MyFile, "RELEASED", 8, (void *)&byteswritten); break;
+											case PRESSED_FOR_X1_SEC:	
+												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX1Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											case PRESSED_FOR_X2_SEC:	
+												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX2Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											case PRESSED_FOR_X3_SEC:	
+												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX3Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											case RELEASED_FOR_Y1_SEC:	
+												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY1Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											case RELEASED_FOR_Y2_SEC:	
+												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY2Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											case RELEASED_FOR_Y3_SEC:	
+												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY3Sec);
+												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+											default: break;
+										}																											
+										break;
+									
+									case PORT_DATA:
+										
+										break;
+									
+									case MEMORY_DATA_UINT8:
+										sprintf( ( char * ) buffer, "%u", *(__IO uint8_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_INT8:
+										sprintf( ( char * ) buffer, "%i", *(__IO uint8_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_UINT16:
+										sprintf( ( char * ) buffer, "%u", *(__IO uint16_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_INT16:
+										sprintf( ( char * ) buffer, "%i", *(__IO uint16_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_UINT32:
+										sprintf( ( char * ) buffer, "%u", *(__IO uint32_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_INT32:
+										sprintf( ( char * ) buffer, "%i", *(__IO uint32_t *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+
+									case MEMORY_DATA_FLOAT:
+										sprintf( ( char * ) buffer, "%f", *(__IO float *)logVars[i].source);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+										break;
+									
+									default:
+										break;
+								}
+								
+								/* Clear the buffer */
+								memset(buffer, 0, byteswritten);	
+								
+								/* Write delimiter */							
+								
+							}
+						}
+						/* Write new line */
+						
+					}		
+				}		
 				
-			}			
-		
+			}					// Loop forever				
 		}
 	}
 	
 	/* Unmount the drive */
 	f_mount(0, SDPath, 0); 
 
-	
+  /* SD card malfunction. Re-insert the card and reboot */
+	while(1) { RTOS_IND_blink(500); osDelay(500); };	
 }
+
+/*-----------------------------------------------------------*/
+
+/* --- Check if a logged variable even has occured. 
+				logName: Log file name.
+*/
+uint8_t CheckLogVarEvent(logVar_t *var)
+{
+
+	return 0;	
+} 
 
 
 /* -----------------------------------------------------------------------
@@ -165,11 +313,11 @@ void LogTask(void * argument)
 				logName: Log file name. Max 10 char. If log already exists, a new column will be added.
 				type: RATE or EVENT
 				lengthrate: data rate in Hz (max 1000 Hz) or number of events captured.
-				columnFormat: FMT_SPACE, FMT_TAB, FMT_COMMA
+				delimiterFormat: FMT_SPACE, FMT_TAB, FMT_COMMA
 				indexColumn: FMT_SAMPLE, FMT_TIME
 				indexColumnLabel: Index Column label text. Max 30 char.
 */
-Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, columnFormat_t columnFormat, indexColumn_t indexColumn,\
+Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
 	const char* indexColumnLabel)
 {
 	FRESULT res; char name[15] = {0};
@@ -186,8 +334,8 @@ Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, col
 	
 	/* Check parameters are correct */
 	if ( (type != RATE && type != EVENT)	||
-			 (columnFormat != FMT_SPACE && columnFormat != FMT_SPACE && columnFormat != FMT_COMMA)	||
-			 (indexColumn != FMT_NONE && indexColumn != FMT_SAMPLE && indexColumn != FMT_TIME)	||
+			 (delimiterFormat != FMT_SPACE && delimiterFormat != FMT_SPACE && delimiterFormat != FMT_COMMA)	||
+			 (indexColumnFormat != FMT_NONE && indexColumnFormat != FMT_SAMPLE && indexColumnFormat != FMT_TIME)	||
 			 (lengthrate > 1000) )
 		return H05R0_ERR_WrongParams;				
 					
@@ -208,9 +356,9 @@ Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, col
 			/* Log created successfuly */
 			logs[i].name = logName;
 			logs[i].type = type;
-			logs[i].length = lengthrate;
-			logs[i].columnFormat = columnFormat;
-			logs[i].indexColumn = indexColumn;
+			logs[i].length_rate = lengthrate;
+			logs[i].delimiterFormat = delimiterFormat;
+			logs[i].indexColumnFormat = indexColumnFormat;
 			logs[i].indexColumnLabel = indexColumnLabel;
 			
 			/* Write log header */
@@ -235,12 +383,15 @@ Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, col
 	return H05R0_ERR_MaxLogs;	
 }
 
+/*-----------------------------------------------------------*/
+
 /* --- Save data from a port to an existing data log. 
 				logName: Log file name.
-				source: data source. Port (P1-Px).
+				type: PORT_DIGITAL, PORT_DATA, PORT_BUTTON, MEMORY_DATA.
+				source: data source. Ports (P1-Px), buttons (B1-Bx) or memory location.
 				columnLabel: Column label text. Max 30 char.
 */
-Module_Status LogPort(const char* logName, uint8_t source, const char* ColumnLabel)
+Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, const char* ColumnLabel)
 {
 	uint8_t i = 0, j = 0;
 
@@ -252,9 +403,10 @@ Module_Status LogPort(const char* logName, uint8_t source, const char* ColumnLab
 			/* Make sure there's enough space for this log variable */
 			for( i=0 ; i<MAX_LOG_VARS ; i++)
 			{
-				if(logVars[i].port == 0 && logVars[i].memory == 0)
+				if(logVars[i].type == 0)
 				{
-					logVars[i].port = source;
+					logVars[i].type = type;
+					logVars[i].source = source;
 					logVars[i].logIndex = j;
 					logVars[i].varLabel = ColumnLabel;
 					
@@ -268,117 +420,109 @@ Module_Status LogPort(const char* logName, uint8_t source, const char* ColumnLab
 	return H05R0_ERR_LogDoesNotExist;	
 }
 
-/* --- Save data from a port button to an existing data log. 
-				logName: Log file name.
-				source: data source. Button (B1-Bx).
-				columnLabel: Column label text. Max 30 char.
-*/
-Module_Status LogButton(const char* logName, uint8_t source, const char* ColumnLabel)
-{
-	uint8_t i = 0, j = 0;
-
-	/* Search for this log to make sure it exists */
-	for( j=0 ; j<MAX_LOGS ; j++)
-	{
-		if (!strcmp(logs[j].name, logName))
-		{
-			/* Make sure there's enough space for this log variable */
-			for( i=0 ; i<MAX_LOG_VARS ; i++)
-			{
-				if(logVars[i].port == 0 && logVars[i].memory == 0)
-				{
-					logVars[i].port = source<<4;			// Distinguish buttons from ports
-					logVars[i].logIndex = j;
-					logVars[i].varLabel = ColumnLabel;
-					
-					return H05R0_OK;
-				}
-			}
-			return H05R0_ERR_MaxLogVars;
-		}
-	}		
-
-	return H05R0_ERR_LogDoesNotExist;	
-}
-
-/* --- Save data from a memory location to an existing data log. 
-				logName: Log file name.
-				source: memory location.
-				columnLabel: Column label text. Max 30 char.
-*/
-Module_Status LogMemory(const char* logName, uint32_t memory, const char* ColumnLabel)
-{
-	uint8_t i = 0, j = 0;
-
-	/* Search for this log to make sure it exists */
-	for( j=0 ; j<MAX_LOGS ; j++)
-	{
-		if (!strcmp(logs[j].name, logName))
-		{
-			/* Make sure there's enough space for this log variable */
-			for( i=0 ; i<MAX_LOG_VARS ; i++)
-			{
-				if(logVars[i].port == 0 && logVars[i].memory == 0)
-				{
-					logVars[i].memory = memory;
-					logVars[i].logIndex = j;
-					logVars[i].varLabel = ColumnLabel;
-					
-					return H05R0_OK;
-				}
-			}
-			return H05R0_ERR_MaxLogVars;
-		}
-	}		
-
-	return H05R0_ERR_LogDoesNotExist;		
-}
+/*-----------------------------------------------------------*/
 
 /* --- Start an existing data log. 
 				logName: Log file name.
 */
 Module_Status StartLog(const char* logName)
 {
-	Module_Status result = H05R0_OK;
+	uint8_t j = 0;
 
+	/* Search for this log to make sure it exists */
+	for( j=0 ; j<MAX_LOGS ; j++)
+	{
+		if (!strcmp(logs[j].name, logName))
+		{
+			activeLogs |= (0x01 << j);
+			logs[j].sampleCount = 0;
+			return H05R0_OK;
+		}		
+	}
 
-	return result;	
+	return H05R0_ERR_LogDoesNotExist;	
 }
+
+/*-----------------------------------------------------------*/
 
 /* --- Stop a running data log. 
 				logName: Log file name.
 */
 Module_Status StopLog(const char* logName)
 {
-	Module_Status result = H05R0_OK;
+	uint8_t j = 0;
 
+	/* Search for this log to make sure it exists */
+	for( j=0 ; j<MAX_LOGS ; j++)
+	{
+		if (!strcmp(logs[j].name, logName))
+		{
+			if ( (activeLogs >> j) & 0x01 )
+			{
+				activeLogs &= ~(0x01 << j);
+				logs[j].sampleCount = 0;
+				return H05R0_OK;
+			}
+			else
+				return H05R0_ERR_LogIsNotActive;
+		}		
+	}
 
-	return result;	
+	return H05R0_ERR_LogDoesNotExist;	
 }
+
+/*-----------------------------------------------------------*/
 
 /* --- Pause a running data log. 
 				logName: Log file name.
 */
 Module_Status PauseLog(const char* logName)
 {
-	Module_Status result = H05R0_OK;
+	uint8_t j = 0;
 
+	/* Search for this log to make sure it exists */
+	for( j=0 ; j<MAX_LOGS ; j++)
+	{
+		if (!strcmp(logs[j].name, logName))
+		{
+			if ( (activeLogs >> j) & 0x01 )
+			{
+				activeLogs &= ~(0x01 << j);
+				return H05R0_OK;
+			}
+			else
+				return H05R0_ERR_LogIsNotActive;
+		}		
+	}
 
-	return result;	
+	return H05R0_ERR_LogDoesNotExist;	
 } 
+
+/*-----------------------------------------------------------*/
 
 /* --- Resume a paused data log. 
 				logName: Log file name.
 */
 Module_Status ResumeLog(const char* logName)
 {
-	Module_Status result = H05R0_OK;
+	uint8_t j = 0;
 
+	/* Search for this log to make sure it exists */
+	for( j=0 ; j<MAX_LOGS ; j++)
+	{
+		if (!strcmp(logs[j].name, logName))
+		{
+			activeLogs |= (0x01 << j);
+			return H05R0_OK;
+		}		
+	}
 
-	return result;	
+	return H05R0_ERR_LogDoesNotExist;	
 } 
 
-/* --- Start an existing data log. 
+/*-----------------------------------------------------------*/
+
+/* --- Delete an existing data log. 
 				logName: Log file name.
 				options: DELETE_ALL, KEEP_ON_DISK
 */

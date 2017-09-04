@@ -144,24 +144,28 @@ typedef enum
 	H05R0_ERR_MaxLogs,
 	H05R0_ERR_MaxLogVars,
 	H05R0_ERR_LogDoesNotExist,
+	H05R0_ERR_LogIsNotActive,
 	H05R0_ERROR = 255
 } Module_Status;
 
 /* Log enuemrations */
 typedef enum { RATE = 1, EVENT } logType_t;
-typedef enum { FMT_SPACE = 1, FMT_TAB, FMT_COMMA } columnFormat_t;
-typedef enum { FMT_NONE = 0, FMT_SAMPLE, FMT_TIME } indexColumn_t;
+typedef enum { PORT_DIGITAL = 1, PORT_DATA, PORT_BUTTON, MEMORY_DATA_UINT8, MEMORY_DATA_INT8, MEMORY_DATA_UINT16, MEMORY_DATA_INT16, MEMORY_DATA_UINT32,
+							 MEMORY_DATA_INT32, MEMORY_DATA_FLOAT } logVarType_t;
+typedef enum { FMT_SPACE = 1, FMT_TAB, FMT_COMMA } delimiterFormat_t;
+typedef enum { FMT_NONE = 0, FMT_SAMPLE, FMT_TIME } indexColumnFormat_t;
 typedef enum { DELETE_ALL = 0, KEEP_ON_DISK } options_t;
 
 /* Log Struct Type Definition */  
 typedef struct
 {
 	const char* name;
-	uint8_t type; 
-	float length; 
-	columnFormat_t columnFormat; 
-	indexColumn_t indexColumn;
+	logType_t type; 
+	float length_rate; 
+	delimiterFormat_t delimiterFormat; 
+	indexColumnFormat_t indexColumnFormat;
 	const char* indexColumnLabel;
+	uint32_t sampleCount;
 } 
 log_t;
 
@@ -169,9 +173,9 @@ log_t;
 typedef struct
 {
 	uint8_t logIndex;
+	logVarType_t type;
 	const char* varLabel;
-	uint8_t port;
-	uint32_t memory;
+	uint32_t source;
 } 
 logVar_t;
 
@@ -211,11 +215,9 @@ extern void MX_USART5_UART_Init(void);
    ----------------------------------------------------------------------- 
 */
 
-extern Module_Status CreateLog(const char* logName, uint8_t type, float lengthrate, columnFormat_t columnFormat, indexColumn_t indexColumn,\
+extern Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
 	const char* indexColumnLabel);
-extern Module_Status LogPort(const char* logName, uint8_t source, const char* ColumnLabel);
-extern Module_Status LogButton(const char* logName, uint8_t source, const char* ColumnLabel);
-extern Module_Status LogMemory(const char* logName, uint32_t memory, const char* ColumnLabel);
+extern Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, const char* ColumnLabel);
 extern Module_Status StartLog(const char* logName);
 extern Module_Status StopLog(const char* logName);
 extern Module_Status PauseLog(const char* logName);
