@@ -80,10 +80,24 @@ void Module_Init(void)
 	/* Get the uSD size and info */
 	BSP_SD_GetCardInfo(&CardInfo);
 	
-	/* Create the logging task */
-	xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);
+	/* Link the micro SD disk I/O driver */
+  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+  {
+    /* Mount the default drive */
+    if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
+    {
+			/* Unmount the drive */
+			f_mount(0, SDPath, 0); 
+      /* SD card malfunction. Re-insert the card and reboot */
+			while(1) { };//IND_blink(500); HAL_Delay(500); };
+    }
+    else
+    {		
+			/* Create the logging task */
+			xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);			
+		}
+	}
 	
-  
 }
 /*-----------------------------------------------------------*/
 
@@ -133,163 +147,147 @@ void LogTask(void * argument)
 	uint8_t i, j;
 	FRESULT res; char name[15] = {0}; 	
 	
-  /* Link the micro SD disk I/O driver */
-  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
-  {
-    /* Mount the default drive */
-    if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
-    {
-      /* SD card malfunction. Re-insert the card and reboot */
-			while(1) { RTOS_IND_blink(500); osDelay(500); };
-    }
-    else
-    {			
-			/* Infinite loop */
-			for(;;)
-			{
-				
-				/* Check all active logs */
-				for( j=0 ; j<MAX_LOGS ; j++)
-				{	
-					if ( (activeLogs >> j) & 0x01 )
-					{					
-						/* Open this log file if it's closed (and close open one) */
-						if ( ((openLogs >> j) & 0x01) == 0 )
-						{
-							/* Close currently open log */
-							f_close(&MyFile);
-							/* Append log name with extension */
-							strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
-							/* Open this log */
-							res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
-							if (res != FR_OK)	break;	
-							openLogs = (0x01 << j);
-						}						
-						
-						/* Check all registered variables */
-						for( i=0 ; i<MAX_LOG_VARS ; i++)
-						{
-							if ( (logs[j].type == RATE) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
-							{			
-								/* Write index */
-								if (logs[j].delimiterFormat == FMT_TIME)
-								{
-									;
-								}
-								else if (logs[j].delimiterFormat == FMT_SAMPLE)
-								{
-									sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
-									f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
-									memset(buffer, 0, byteswritten);
-									/* Write delimiter */
-									
-								}
-								
-								/* Write variable value */
-								switch (logVars[i].type)
-								{
-									case PORT_DIGITAL:
-										//sprintf( ( char * ) buffer, "%d", HAL_GPIO_ReadPin());
-										//f_write(&MyFile, buffer, 1, (void *)&byteswritten);	
-										break;
-									
-									case PORT_BUTTON:
-										switch (button[logVars[i].source].state)
-										{
-											case OFF:	f_write(&MyFile, "OFF", 3, (void *)&byteswritten); break;
-											case ON:	f_write(&MyFile, "ON", 2, (void *)&byteswritten); break;
-											case OPEN:	f_write(&MyFile, "OPEN", 4, (void *)&byteswritten); break;
-											case CLOSED:	f_write(&MyFile, "CLOSED", 6, (void *)&byteswritten); break;
-											case CLICKED:	f_write(&MyFile, "CLICKED", 7, (void *)&byteswritten); break;
-											case DBL_CLICKED:	f_write(&MyFile, "DBL_CLICKED", 11, (void *)&byteswritten); break;
-											case PRESSED:	f_write(&MyFile, "PRESSED", 7, (void *)&byteswritten); break;
-											case RELEASED:	f_write(&MyFile, "RELEASED", 8, (void *)&byteswritten); break;
-											case PRESSED_FOR_X1_SEC:	
-												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX1Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											case PRESSED_FOR_X2_SEC:	
-												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX2Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											case PRESSED_FOR_X3_SEC:	
-												sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX3Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											case RELEASED_FOR_Y1_SEC:	
-												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY1Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											case RELEASED_FOR_Y2_SEC:	
-												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY2Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											case RELEASED_FOR_Y3_SEC:	
-												sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY3Sec);
-												f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
-											default: break;
-										}																											
-										break;
-									
-									case PORT_DATA:
-										
-										break;
-									
-									case MEMORY_DATA_UINT8:
-										sprintf( ( char * ) buffer, "%u", *(__IO uint8_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_INT8:
-										sprintf( ( char * ) buffer, "%i", *(__IO uint8_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_UINT16:
-										sprintf( ( char * ) buffer, "%u", *(__IO uint16_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_INT16:
-										sprintf( ( char * ) buffer, "%i", *(__IO uint16_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_UINT32:
-										sprintf( ( char * ) buffer, "%u", *(__IO uint32_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_INT32:
-										sprintf( ( char * ) buffer, "%i", *(__IO uint32_t *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-
-									case MEMORY_DATA_FLOAT:
-										sprintf( ( char * ) buffer, "%f", *(__IO float *)logVars[i].source);
-										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
-										break;
-									
-									default:
-										break;
-								}
-								
-								/* Clear the buffer */
-								memset(buffer, 0, byteswritten);	
-								
-								/* Write delimiter */							
-								
-							}
-						}
-						/* Write new line */
-						
-					}		
-				}		
-				
-			}					// Loop forever				
-		}
-	}
 	
-	/* Unmount the drive */
-	f_mount(0, SDPath, 0); 
+	/* Infinite loop */
+	for(;;)
+	{
+		
+		/* Check all active logs */
+		for( j=0 ; j<MAX_LOGS ; j++)
+		{	
+			if ( (activeLogs >> j) & 0x01 )
+			{					
+				/* Open this log file if it's closed (and close open one) */
+				if ( ((openLogs >> j) & 0x01) == 0 )
+				{
+					/* Close currently open log */
+					f_close(&MyFile);
+					/* Append log name with extension */
+					strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
+					/* Open this log */
+					res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
+					if (res != FR_OK)	break;	
+					openLogs = (0x01 << j);
+				}						
+				
+				/* Check all registered variables */
+				for( i=0 ; i<MAX_LOG_VARS ; i++)
+				{
+					if ( (logs[j].type == RATE) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
+					{			
+						/* Write index */
+						if (logs[j].delimiterFormat == FMT_TIME)
+						{
+							;
+						}
+						else if (logs[j].delimiterFormat == FMT_SAMPLE)
+						{
+							sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
+							f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
+							memset(buffer, 0, byteswritten);
+							/* Write delimiter */
+							
+						}
+						
+						/* Write variable value */
+						switch (logVars[i].type)
+						{
+							case PORT_DIGITAL:
+								//sprintf( ( char * ) buffer, "%d", HAL_GPIO_ReadPin());
+								//f_write(&MyFile, buffer, 1, (void *)&byteswritten);	
+								break;
+							
+							case PORT_BUTTON:
+								switch (button[logVars[i].source].state)
+								{
+									case OFF:	f_write(&MyFile, "OFF", 3, (void *)&byteswritten); break;
+									case ON:	f_write(&MyFile, "ON", 2, (void *)&byteswritten); break;
+									case OPEN:	f_write(&MyFile, "OPEN", 4, (void *)&byteswritten); break;
+									case CLOSED:	f_write(&MyFile, "CLOSED", 6, (void *)&byteswritten); break;
+									case CLICKED:	f_write(&MyFile, "CLICKED", 7, (void *)&byteswritten); break;
+									case DBL_CLICKED:	f_write(&MyFile, "DBL_CLICKED", 11, (void *)&byteswritten); break;
+									case PRESSED:	f_write(&MyFile, "PRESSED", 7, (void *)&byteswritten); break;
+									case RELEASED:	f_write(&MyFile, "RELEASED", 8, (void *)&byteswritten); break;
+									case PRESSED_FOR_X1_SEC:	
+										sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX1Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									case PRESSED_FOR_X2_SEC:	
+										sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX2Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									case PRESSED_FOR_X3_SEC:	
+										sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX3Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									case RELEASED_FOR_Y1_SEC:	
+										sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY1Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									case RELEASED_FOR_Y2_SEC:	
+										sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY2Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									case RELEASED_FOR_Y3_SEC:	
+										sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY3Sec);
+										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
+									default: break;
+								}																											
+								break;
+							
+							case PORT_DATA:
+								
+								break;
+							
+							case MEMORY_DATA_UINT8:
+								sprintf( ( char * ) buffer, "%u", *(__IO uint8_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
 
-  /* SD card malfunction. Re-insert the card and reboot */
-	while(1) { RTOS_IND_blink(500); osDelay(500); };	
+							case MEMORY_DATA_INT8:
+								sprintf( ( char * ) buffer, "%i", *(__IO uint8_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+
+							case MEMORY_DATA_UINT16:
+								sprintf( ( char * ) buffer, "%u", *(__IO uint16_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+
+							case MEMORY_DATA_INT16:
+								sprintf( ( char * ) buffer, "%i", *(__IO uint16_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+
+							case MEMORY_DATA_UINT32:
+								sprintf( ( char * ) buffer, "%u", *(__IO uint32_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+
+							case MEMORY_DATA_INT32:
+								sprintf( ( char * ) buffer, "%i", *(__IO uint32_t *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+
+							case MEMORY_DATA_FLOAT:
+								sprintf( ( char * ) buffer, "%f", *(__IO float *)logVars[i].source);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
+								break;
+							
+							default:
+								break;
+						}
+						
+						/* Clear the buffer */
+						memset(buffer, 0, byteswritten);	
+						
+						/* Write delimiter */							
+						
+					}
+				}
+				/* Write new line */
+				
+			}		
+		}	
+		
+		taskYIELD();
+	}								
+
 }
 
 /*-----------------------------------------------------------*/

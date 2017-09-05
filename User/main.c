@@ -98,11 +98,11 @@ void FrontEndTask(void * argument)
 
 	//CreateLog("MyLog1", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Sample");
 	
-	CreateLog("MyLog9", EVENT, 200, FMT_COMMA, FMT_TIME, "Time (sec)");
+	//CreateLog("MyLog9", EVENT, 200, FMT_COMMA, FMT_TIME, "Time (sec)");
 	
-	CreateLog("MyLog10", EVENT, 1000, FMT_COMMA, FMT_TIME, "Time (sec)");
+	//CreateLog("MyLog10", EVENT, 1000, FMT_COMMA, FMT_TIME, "Time (sec)");
 	
-	CreateLog("MyLog11", EVENT, 120, FMT_COMMA, FMT_TIME, "Time (sec)");
+	//CreateLog("MyLog11", EVENT, 120, FMT_COMMA, FMT_TIME, "Time (sec)");
 	
 	//LogPort("MyLog1", P4, "P4 (volt/sec)");
 	
