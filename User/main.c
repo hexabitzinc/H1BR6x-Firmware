@@ -95,33 +95,22 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-
-	//CreateLog("MyLog1", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Sample");
-	
-	//CreateLog("MyLog9", EVENT, 200, FMT_COMMA, FMT_TIME, "Time (sec)");
-	
-	//CreateLog("MyLog10", EVENT, 1000, FMT_COMMA, FMT_TIME, "Time (sec)");
-	
-	//CreateLog("MyLog11", EVENT, 120, FMT_COMMA, FMT_TIME, "Time (sec)");
-	
-	//LogPort("MyLog1", P4, "P4 (volt/sec)");
-	
-	//LogButton("MyLog2", B3, "Switch 3 (E-stop)");
+	const char* mylog = "B3Log20";
 	
 	AddPortButton(MOMENTARY_NO, P3);
 	
-	SetButtonEvents(P3, 1, 1, 0, 0, 0, 0, 0, 0);
+	SetButtonEvents(P3, 1, 1, 1, 3, 0, 2, 0, 0);
 	
-	if (CreateLog("B4Log4", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Count") == H05R0_OK)
+	if (CreateLog(mylog, RATE, 10, FMT_TAB, FMT_SAMPLE, "Count") == H05R0_OK)
 	{	
-		if (LogVar("B4Log4", PORT_BUTTON, B3, "Switch 3 (E-stop)") == H05R0_OK)
+		if (LogVar(mylog, PORT_BUTTON, B3, "Switch 3 (E-stop)") == H05R0_OK)
 		{
 			
-			StartLog("B4Log4");
+			StartLog(mylog);
 			
-			Delay_s(10);
+			Delay_s(20);
 			
-			StopLog("B4Log4");			
+			StopLog(mylog);			
 			
 		}			
 	}

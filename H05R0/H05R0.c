@@ -144,14 +144,15 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t i, j, varEnabled;
+	uint8_t i, j;
 	//FRESULT res; char name[15] = {0}; 	
 	static uint32_t rateCounter;
 	
 	/* Infinite loop */
 	for(;;)
 	{
-		++rateCounter;				// Advance rate counter
+		++rateCounter;									// Advance rate counter
+		deferButtonReset = 1;						// Defer button state reset until it's logged here
 		
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
@@ -174,7 +175,7 @@ void LogTask(void * argument)
 				/* Check for rate or event */
 				if ( (logs[j].type == RATE && rateCounter >= (configTICK_RATE_HZ/logs[j].length_rate)) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
 				{	
-					rateCounter = 0;				// Reset the rate counter
+					rateCounter = 0;						// Reset the rate counter
 					
 					/* Write new line */
 					f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);	
@@ -189,20 +190,22 @@ void LogTask(void * argument)
 						sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
 						f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
 						memset(buffer, 0, byteswritten);
-						/* Write delimiter */
-						if (logs[j].delimiterFormat == FMT_SPACE)
-							f_write(&MyFile, " ", 1, (void *)&byteswritten);
-						else if (logs[j].delimiterFormat == FMT_TAB)
-							f_write(&MyFile, "\t", 1, (void *)&byteswritten);
-						else if (logs[j].delimiterFormat == FMT_COMMA)
-							f_write(&MyFile, ",", 1, (void *)&byteswritten);
 					}				
-					
+
 					/* Check all registered variables */
 					for( i=0 ; i<MAX_LOG_VARS ; i++)
 					{
-	
-						varEnabled = 1; 
+						/* Write delimiter */	
+						if (logVars[i].type != 0)
+						{					
+							if (logs[j].delimiterFormat == FMT_SPACE)
+								f_write(&MyFile, " ", 1, (void *)&byteswritten);
+							else if (logs[j].delimiterFormat == FMT_TAB)
+								f_write(&MyFile, "\t", 1, (void *)&byteswritten);
+							else if (logs[j].delimiterFormat == FMT_COMMA)
+								f_write(&MyFile, ",", 1, (void *)&byteswritten);								
+						}
+						
 						/* Write variable value */
 						switch (logVars[i].type)
 						{
@@ -241,7 +244,8 @@ void LogTask(void * argument)
 										sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY3Sec);
 										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
 									default: break;
-								}																											
+								}		
+								deferButtonReset = 0; 
 								break;
 							
 							case PORT_DATA:
@@ -283,27 +287,19 @@ void LogTask(void * argument)
 								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
 								break;
 							
-							default:			// Variable not enabled
-								varEnabled = 0; break;
+							default:			
+								break;
 						}
 						
 						/* Clear the buffer */
-						memset(buffer, 0, byteswritten);	
+						memset(buffer, 0, byteswritten);
 						
-						/* Write delimiter */	
-						if (varEnabled)
-						{
-							if (logs[j].delimiterFormat == FMT_SPACE)
-								f_write(&MyFile, " ", 1, (void *)&byteswritten);
-							else if (logs[j].delimiterFormat == FMT_TAB)
-								f_write(&MyFile, "\t", 1, (void *)&byteswritten);
-							else if (logs[j].delimiterFormat == FMT_COMMA)
-								f_write(&MyFile, ",", 1, (void *)&byteswritten);	
-						}						
 					}
 				}
-
-			}		
+				break;
+			}	
+			else	
+				break;				
 		}	
 		
 		taskYIELD();
@@ -353,7 +349,7 @@ Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, d
 	
 	/* Check parameters are correct */
 	if ( (type != RATE && type != EVENT)	||
-			 (delimiterFormat != FMT_SPACE && delimiterFormat != FMT_SPACE && delimiterFormat != FMT_COMMA)	||
+			 (delimiterFormat != FMT_SPACE && delimiterFormat != FMT_TAB && delimiterFormat != FMT_COMMA)	||
 			 (indexColumnFormat != FMT_NONE && indexColumnFormat != FMT_SAMPLE && indexColumnFormat != FMT_TIME)	||
 			 (lengthrate > 1000) )
 		return H05R0_ERR_WrongParams;				
