@@ -108,6 +108,24 @@ void FrontEndTask(void * argument)
 	
 	//LogButton("MyLog2", B3, "Switch 3 (E-stop)");
 	
+	AddPortButton(MOMENTARY_NO, P3);
+	
+	SetButtonEvents(P3, 1, 1, 0, 0, 0, 0, 0, 0);
+	
+	if (CreateLog("B4Log4", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Count") == H05R0_OK)
+	{	
+		if (LogVar("B4Log4", PORT_BUTTON, B3, "Switch 3 (E-stop)") == H05R0_OK)
+		{
+			
+			StartLog("B4Log4");
+			
+			Delay_s(10);
+			
+			StopLog("B4Log4");			
+			
+		}			
+	}
+	
   /* Infinite loop */
   for(;;)
   {

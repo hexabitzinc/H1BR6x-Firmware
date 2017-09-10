@@ -74,7 +74,7 @@ void Module_Init(void)
 	if (BSP_SD_Init() == MSD_ERROR)
 	{
 		/* No SD card. Insert SD card and reboot */
-		while(1) { IND_blink(500); HAL_Delay(500); };		
+		while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };		
 	}	
 	
 	/* Get the uSD size and info */
@@ -89,7 +89,7 @@ void Module_Init(void)
 			/* Unmount the drive */
 			f_mount(0, SDPath, 0); 
       /* SD card malfunction. Re-insert the card and reboot */
-			while(1) { };//IND_blink(500); HAL_Delay(500); };
+			while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };	
     }
     else
     {		
@@ -144,51 +144,65 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t i, j;
-	FRESULT res; char name[15] = {0}; 	
-	
+	uint8_t i, j, varEnabled;
+	//FRESULT res; char name[15] = {0}; 	
+	static uint32_t rateCounter;
 	
 	/* Infinite loop */
 	for(;;)
 	{
+		++rateCounter;				// Advance rate counter
 		
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
 		{	
 			if ( (activeLogs >> j) & 0x01 )
 			{					
-				/* Open this log file if it's closed (and close open one) */
-				if ( ((openLogs >> j) & 0x01) == 0 )
-				{
-					/* Close currently open log */
-					f_close(&MyFile);
-					/* Append log name with extension */
-					strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
-					/* Open this log */
-					res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
-					if (res != FR_OK)	break;	
-					openLogs = (0x01 << j);
-				}						
+//				/* Open this log file if it's closed (and close open one) */
+//				if ( ((openLogs >> j) & 0x01) == 0 )
+//				{
+//					/* Close currently open log */
+//					f_close(&MyFile);
+//					/* Append log name with extension */
+//					strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
+//					/* Open this log */
+//					res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
+//					if (res != FR_OK)	break;	
+//					openLogs = (0x01 << j);
+//				}		
 				
-				/* Check all registered variables */
-				for( i=0 ; i<MAX_LOG_VARS ; i++)
-				{
-					if ( (logs[j].type == RATE) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
-					{			
-						/* Write index */
-						if (logs[j].delimiterFormat == FMT_TIME)
-						{
-							;
-						}
-						else if (logs[j].delimiterFormat == FMT_SAMPLE)
-						{
-							sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
-							f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
-							memset(buffer, 0, byteswritten);
-							/* Write delimiter */
-							
-						}
-						
+				/* Check for rate or event */
+				if ( (logs[j].type == RATE && rateCounter >= (configTICK_RATE_HZ/logs[j].length_rate)) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
+				{	
+					rateCounter = 0;				// Reset the rate counter
+					
+					/* Write new line */
+					f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);	
+					
+					/* Write index */
+					if (logs[j].indexColumnFormat == FMT_TIME)
+					{
+						;
+					}
+					else if (logs[j].indexColumnFormat == FMT_SAMPLE)
+					{
+						sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
+						f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
+						memset(buffer, 0, byteswritten);
+						/* Write delimiter */
+						if (logs[j].delimiterFormat == FMT_SPACE)
+							f_write(&MyFile, " ", 1, (void *)&byteswritten);
+						else if (logs[j].delimiterFormat == FMT_TAB)
+							f_write(&MyFile, "\t", 1, (void *)&byteswritten);
+						else if (logs[j].delimiterFormat == FMT_COMMA)
+							f_write(&MyFile, ",", 1, (void *)&byteswritten);
+					}				
+					
+					/* Check all registered variables */
+					for( i=0 ; i<MAX_LOG_VARS ; i++)
+					{
+	
+						varEnabled = 1; 
 						/* Write variable value */
 						switch (logVars[i].type)
 						{
@@ -269,19 +283,26 @@ void LogTask(void * argument)
 								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);									
 								break;
 							
-							default:
-								break;
+							default:			// Variable not enabled
+								varEnabled = 0; break;
 						}
 						
 						/* Clear the buffer */
 						memset(buffer, 0, byteswritten);	
 						
-						/* Write delimiter */							
-						
+						/* Write delimiter */	
+						if (varEnabled)
+						{
+							if (logs[j].delimiterFormat == FMT_SPACE)
+								f_write(&MyFile, " ", 1, (void *)&byteswritten);
+							else if (logs[j].delimiterFormat == FMT_TAB)
+								f_write(&MyFile, "\t", 1, (void *)&byteswritten);
+							else if (logs[j].delimiterFormat == FMT_COMMA)
+								f_write(&MyFile, ",", 1, (void *)&byteswritten);	
+						}						
 					}
 				}
-				/* Write new line */
-				
+
 			}		
 		}	
 		
@@ -372,8 +393,11 @@ Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, d
 				res = f_write(&MyFile, buffer, sizeof(logHeaderText3), (void *)&byteswritten);	
 			}
 			memset(buffer, 0, byteswritten);
-			f_close(&MyFile);
+			//f_close(&MyFile);
 			
+			/* Write index label */
+			res = f_write(&MyFile, indexColumnLabel, strlen(indexColumnLabel), (void *)&byteswritten);
+							
 			return H05R0_OK;
 		}
   }	
@@ -407,6 +431,16 @@ Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, co
 					logVars[i].source = source;
 					logVars[i].logIndex = j;
 					logVars[i].varLabel = ColumnLabel;
+					
+					/* Write delimiter */
+					if (logs[j].delimiterFormat == FMT_SPACE)
+						f_write(&MyFile, " ", 1, (void *)&byteswritten);
+					else if (logs[j].delimiterFormat == FMT_TAB)
+						f_write(&MyFile, "\t", 1, (void *)&byteswritten);
+					else if (logs[j].delimiterFormat == FMT_COMMA)
+						f_write(&MyFile, ",", 1, (void *)&byteswritten);
+					/* Write variable label */
+					f_write(&MyFile, ColumnLabel, strlen(ColumnLabel), (void *)&byteswritten);
 					
 					return H05R0_OK;
 				}
@@ -459,13 +493,15 @@ Module_Status StopLog(const char* logName)
 			{
 				activeLogs &= ~(0x01 << j);
 				logs[j].sampleCount = 0;
+				/* Close log file */
+				f_close(&MyFile);
 				return H05R0_OK;
 			}
 			else
 				return H05R0_ERR_LogIsNotActive;
 		}		
 	}
-
+	
 	return H05R0_ERR_LogDoesNotExist;	
 }
 
