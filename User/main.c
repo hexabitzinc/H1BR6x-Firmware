@@ -95,13 +95,13 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-	const char* mylog = "B3Log20";
+	const char* mylog = "B3Log32";
 	
 	AddPortButton(MOMENTARY_NO, P3);
 	
 	SetButtonEvents(P3, 1, 1, 1, 3, 0, 2, 0, 0);
 	
-	if (CreateLog(mylog, RATE, 10, FMT_TAB, FMT_SAMPLE, "Count") == H05R0_OK)
+	if (CreateLog(mylog, EVENT, 5, FMT_COMMA, FMT_SAMPLE, "Count") == H05R0_OK)
 	{	
 		if (LogVar(mylog, PORT_BUTTON, B3, "Switch 3 (E-stop)") == H05R0_OK)
 		{

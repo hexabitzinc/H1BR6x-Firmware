@@ -37,15 +37,21 @@ char SDPath[4]; /* SD card logical drive path */
 FIL MyFile;     /* File object */
 uint32_t byteswritten, bytesread;                     /* File write/read counts */
 uint8_t buffer[100];
-char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n\r";
-char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n\r";
-char logHeaderText3[] = "Log type: Event @ %d events max\n\n\r";
-uint16_t openLogs, activeLogs;
+char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
+char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
+char logHeaderText3[] = "Log type: Events\n\n";
+uint16_t openLog = 0xFFFF, activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
+uint8_t temp_uint8 = 0; int8_t temp_int8 = 0;
+uint16_t temp_uint16 = 0; int16_t temp_int16 = 0;
+uint32_t temp_uint32 = 0; int32_t temp_int32 = 0;
+float temp_float = 0; 
 
 /* Private function prototypes -----------------------------------------------*/	
 void LogTask(void * argument);
-uint8_t CheckLogVarEvent(logVar_t *var);
+uint8_t CheckLogVarEvent(uint16_t varIndex);
+Module_Status OpenThisLog(uint16_t logindex);
+
 
 /* Create CLI commands --------------------------------------------------------*/
 
@@ -144,57 +150,55 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t i, j;
-	//FRESULT res; char name[15] = {0}; 	
+	uint8_t i, j, eventResult; 
+	static uint8_t flag;
 	static uint32_t rateCounter;
 	
 	/* Infinite loop */
 	for(;;)
 	{
-		++rateCounter;									// Advance rate counter
-		deferButtonReset = 1;						// Defer button state reset until it's logged here
+		++rateCounter;											// Advance rate counter
+		deferButtonReset = 1;								// Defer button state reset until it's logged here
 		
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
 		{	
 			if ( (activeLogs >> j) & 0x01 )
-			{					
-//				/* Open this log file if it's closed (and close open one) */
-//				if ( ((openLogs >> j) & 0x01) == 0 )
-//				{
-//					/* Close currently open log */
-//					f_close(&MyFile);
-//					/* Append log name with extension */
-//					strcpy((char *)name, logs[j].name); strncat((char *)name, ".TXT", 4);
-//					/* Open this log */
-//					res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
-//					if (res != FR_OK)	break;	
-//					openLogs = (0x01 << j);
-//				}		
+			{			
+				/* Open this log file if it's closed (and close open one) */
+				OpenThisLog(j);					
 				
-				/* Check for rate or event */
-				if ( (logs[j].type == RATE && rateCounter >= (configTICK_RATE_HZ/logs[j].length_rate)) || (logs[j].type == EVENT && CheckLogVarEvent(&logVars[i])) )
-				{	
-					rateCounter = 0;						// Reset the rate counter
+				/* Check all registered variables */
+				for( i=0 ; i<MAX_LOG_VARS ; i++)
+				{		
+					eventResult = CheckLogVarEvent(i);
 					
-					/* Write new line */
-					f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);	
+					/* Check for rate or event */
+					if ( (logs[j].type == RATE && rateCounter >= (configTICK_RATE_HZ/logs[j].rate)) || (logs[j].type == EVENT && eventResult) )
+					{			
+						/* Execute this section only once per cycle */
+						if (!flag)
+						{	
+							flag = 1;												// Event index written once
+							
+							++(logs[j].sampleCount);				// Advance one sample
+							
+							/* Write new line */
+							f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);	
+							
+							/* Write index */
+							if (logs[j].indexColumnFormat == FMT_TIME)
+							{
+								;
+							}
+							else if (logs[j].indexColumnFormat == FMT_SAMPLE)
+							{
+								sprintf( ( char * ) buffer, "%d", logs[j].sampleCount);
+								f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
+								memset(buffer, 0, byteswritten);
+							}					
+						}
 					
-					/* Write index */
-					if (logs[j].indexColumnFormat == FMT_TIME)
-					{
-						;
-					}
-					else if (logs[j].indexColumnFormat == FMT_SAMPLE)
-					{
-						sprintf( ( char * ) buffer, "%d", ++(logs[j].sampleCount));
-						f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten);	
-						memset(buffer, 0, byteswritten);
-					}				
-
-					/* Check all registered variables */
-					for( i=0 ; i<MAX_LOG_VARS ; i++)
-					{
 						/* Write delimiter */	
 						if (logVars[i].type != 0)
 						{					
@@ -295,7 +299,17 @@ void LogTask(void * argument)
 						memset(buffer, 0, byteswritten);
 						
 					}
+					/* Advance samples counter even if event has not occured */
+					else if (rateCounter >= (configTICK_RATE_HZ/logs[j].rate) && logs[j].type == EVENT && !eventResult && !flag) 
+					{
+						flag = 1;												// Execute this only once
+						++(logs[j].sampleCount);				// Advance one sample
+					}
 				}
+				flag = 0;			// Reset this flag for index
+				/* Reset the rate counter */
+				if (rateCounter >= (configTICK_RATE_HZ/logs[j].rate))	
+					rateCounter = 0;		
 				break;
 			}	
 			else	
@@ -309,13 +323,109 @@ void LogTask(void * argument)
 
 /*-----------------------------------------------------------*/
 
-/* --- Check if a logged variable even has occured. 
-				logName: Log file name.
+/* --- Check if a logged variable event has occured. 
+				varIndex: Log variable array index.
 */
-uint8_t CheckLogVarEvent(logVar_t *var)
+uint8_t CheckLogVarEvent(uint16_t varIndex)
 {
-
+	switch (logVars[varIndex].type)
+	{
+		case PORT_DIGITAL:
+			break;
+		
+		case PORT_BUTTON:
+			if (button[logVars[varIndex].source].state != temp_uint8 && button[logVars[varIndex].source].state != 0) {
+				temp_uint8 = button[logVars[varIndex].source].state;
+				return 1;
+			} else if (button[logVars[varIndex].source].state != temp_uint8 && button[logVars[varIndex].source].state == 0) {
+				temp_uint8 = button[logVars[varIndex].source].state;
+				return 0;
+			}
+			break;
+		
+		case PORT_DATA:			
+			break;
+		
+		case MEMORY_DATA_UINT8:
+			if (*(__IO uint8_t *)logVars[varIndex].source != temp_uint8) {
+				temp_uint8 = *(__IO uint8_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_INT8:
+			if (*(__IO uint8_t *)logVars[varIndex].source != temp_int8) {
+				temp_int8 = *(__IO uint8_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_UINT16:
+			if (*(__IO uint16_t *)logVars[varIndex].source != temp_uint16) {
+				temp_uint16 = *(__IO uint16_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_INT16:
+			if (*(__IO uint16_t *)logVars[varIndex].source != temp_int16) {
+				temp_int16 = *(__IO uint16_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_UINT32:
+			if (*(__IO uint32_t *)logVars[varIndex].source != temp_uint32) {
+				temp_uint32 = *(__IO uint32_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_INT32:
+			if (*(__IO uint32_t *)logVars[varIndex].source != temp_int32) {
+				temp_int32 = *(__IO uint32_t *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+			
+		case MEMORY_DATA_FLOAT:
+			if (*(__IO float *)logVars[varIndex].source != temp_float) {
+				temp_float = *(__IO float *)logVars[varIndex].source;
+				return 1;
+			}
+			break;
+					
+		default:			
+			break;
+	}
+	
 	return 0;	
+} 
+
+/*-----------------------------------------------------------*/
+
+/* --- Open this log file if it's closed (and close open one). 
+				logindex: Log array index.
+*/
+Module_Status OpenThisLog(uint16_t logindex)
+{
+	FRESULT res; char name[15] = {0}; 	
+		
+	if ( openLog != logindex )
+	{					
+		/* Close currently open log and store pointer lcoation */
+		logs[openLog].filePtr = MyFile.fptr;
+		openLog = 0xFFFF; f_close(&MyFile);
+		/* Append log name with extension */
+		strcpy((char *)name, logs[logindex].name); strncat((char *)name, ".TXT", 4);
+		/* Open this log */			
+		res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
+		if (res != FR_OK)	return H05R0_ERROR;	
+		openLog = logindex;
+		MyFile.fptr = logs[logindex].filePtr;			// Load last pointer value
+	}	
+		
+	return H05R0_OK;
 } 
 
 
@@ -327,12 +437,12 @@ uint8_t CheckLogVarEvent(logVar_t *var)
 /* --- Create a new data log. 
 				logName: Log file name. Max 10 char. If log already exists, a new column will be added.
 				type: RATE or EVENT
-				lengthrate: data rate in Hz (max 1000 Hz) or number of events captured.
+				rate: data rate in Hz (max 1000 Hz).
 				delimiterFormat: FMT_SPACE, FMT_TAB, FMT_COMMA
 				indexColumn: FMT_SAMPLE, FMT_TIME
 				indexColumnLabel: Index Column label text. Max 30 char.
 */
-Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
+Module_Status CreateLog(const char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
 	const char* indexColumnLabel)
 {
 	FRESULT res; char name[15] = {0};
@@ -351,7 +461,7 @@ Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, d
 	if ( (type != RATE && type != EVENT)	||
 			 (delimiterFormat != FMT_SPACE && delimiterFormat != FMT_TAB && delimiterFormat != FMT_COMMA)	||
 			 (indexColumnFormat != FMT_NONE && indexColumnFormat != FMT_SAMPLE && indexColumnFormat != FMT_TIME)	||
-			 (lengthrate > 1000) )
+			 (rate > 1000) )
 		return H05R0_ERR_WrongParams;				
 					
 	/* Name does not exist. Fill first empty location */
@@ -369,9 +479,10 @@ Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, d
 				return H05R0_ERR_SD;	
 			
 			/* Log created successfuly */
+			openLog = i;
 			logs[i].name = logName;
 			logs[i].type = type;
-			logs[i].length_rate = lengthrate;
+			logs[i].rate = rate;
 			logs[i].delimiterFormat = delimiterFormat;
 			logs[i].indexColumnFormat = indexColumnFormat;
 			logs[i].indexColumnLabel = indexColumnLabel;
@@ -382,14 +493,12 @@ Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, d
 			res = f_write(&MyFile, buffer, sizeof(logHeaderText1), (void *)&byteswritten);
 			memset(buffer, 0, byteswritten);
 			if(type == RATE) {
-				sprintf( ( char * ) buffer, logHeaderText2, lengthrate);
+				sprintf( ( char * ) buffer, logHeaderText2, rate);
 				res = f_write(&MyFile, buffer, sizeof(logHeaderText2), (void *)&byteswritten);				
 			} else if (type == EVENT) {
-				sprintf( ( char * ) buffer, logHeaderText3, (uint32_t)lengthrate);
-				res = f_write(&MyFile, buffer, sizeof(logHeaderText3), (void *)&byteswritten);	
+				res = f_write(&MyFile, logHeaderText3, sizeof(logHeaderText3), (void *)&byteswritten);	
 			}
 			memset(buffer, 0, byteswritten);
-			//f_close(&MyFile);
 			
 			/* Write index label */
 			res = f_write(&MyFile, indexColumnLabel, strlen(indexColumnLabel), (void *)&byteswritten);
@@ -422,13 +531,14 @@ Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, co
 			for( i=0 ; i<MAX_LOG_VARS ; i++)
 			{
 				if(logVars[i].type == 0)
-				{
+				{		
 					logVars[i].type = type;
 					logVars[i].source = source;
 					logVars[i].logIndex = j;
 					logVars[i].varLabel = ColumnLabel;
 					
 					/* Write delimiter */
+					OpenThisLog(j);
 					if (logs[j].delimiterFormat == FMT_SPACE)
 						f_write(&MyFile, " ", 1, (void *)&byteswritten);
 					else if (logs[j].delimiterFormat == FMT_TAB)
@@ -490,7 +600,8 @@ Module_Status StopLog(const char* logName)
 				activeLogs &= ~(0x01 << j);
 				logs[j].sampleCount = 0;
 				/* Close log file */
-				f_close(&MyFile);
+				logs[j].filePtr = MyFile.fptr;
+				openLog = 0xFFFF; f_close(&MyFile);
 				return H05R0_OK;
 			}
 			else

@@ -161,11 +161,12 @@ typedef struct
 {
 	const char* name;
 	logType_t type; 
-	float length_rate; 
+	float rate; 
 	delimiterFormat_t delimiterFormat; 
 	indexColumnFormat_t indexColumnFormat;
 	const char* indexColumnLabel;
 	uint32_t sampleCount;
+	uint32_t filePtr;
 } 
 log_t;
 
@@ -215,7 +216,7 @@ extern void MX_USART5_UART_Init(void);
    ----------------------------------------------------------------------- 
 */
 
-extern Module_Status CreateLog(const char* logName, logType_t type, float lengthrate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
+extern Module_Status CreateLog(const char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
 	const char* indexColumnLabel);
 extern Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, const char* ColumnLabel);
 extern Module_Status StartLog(const char* logName);
