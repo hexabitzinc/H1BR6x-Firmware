@@ -42,10 +42,8 @@ char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
 char logHeaderText3[] = "Log type: Events\n\n";
 uint16_t openLog = 0xFFFF, activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
-uint8_t temp_uint8 = 0; int8_t temp_int8 = 0;
-uint16_t temp_uint16 = 0; int16_t temp_int16 = 0;
-uint32_t temp_uint32 = 0; int32_t temp_int32 = 0;
-float temp_float = 0; 
+uint8_t temp_uint8 = 0; 
+float *ptemp_float[MAX_LOG_VARS]; 
 
 /* Private function prototypes -----------------------------------------------*/	
 void LogTask(void * argument);
@@ -150,7 +148,7 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t i, j, eventResult; 
+	uint8_t i, j, ii, eventResult; 
 	static uint8_t flag;
 	static uint32_t rateCounter;
 	
@@ -199,15 +197,18 @@ void LogTask(void * argument)
 							}					
 						}
 					
-						/* Write delimiter */	
-						if (logVars[i].type != 0)
-						{					
+						/* Write delimiter - Add all delimiters before the variable if the log type is EVENT to clarify variable column 
+								(only one variable is logged per event line) */	
+						for( ii=0 ; ii<=i ; ii++)
+						{	
 							if (logs[j].delimiterFormat == FMT_SPACE)
 								f_write(&MyFile, " ", 1, (void *)&byteswritten);
 							else if (logs[j].delimiterFormat == FMT_TAB)
 								f_write(&MyFile, "\t", 1, (void *)&byteswritten);
 							else if (logs[j].delimiterFormat == FMT_COMMA)
-								f_write(&MyFile, ",", 1, (void *)&byteswritten);								
+								f_write(&MyFile, ",", 1, (void *)&byteswritten);	
+								
+							if (logs[j].type != EVENT || logs[j].sampleCount == 1)	break;			// Do not print extra delimiters on 1st sample 
 						}
 						
 						/* Write variable value */
@@ -296,9 +297,9 @@ void LogTask(void * argument)
 						}
 						
 						/* Clear the buffer */
-						memset(buffer, 0, byteswritten);
-						
+						memset(buffer, 0, byteswritten);					
 					}
+					
 					/* Advance samples counter even if event has not occured */
 					else if (rateCounter >= (configTICK_RATE_HZ/logs[j].rate) && logs[j].type == EVENT && !eventResult && !flag) 
 					{
@@ -306,6 +307,7 @@ void LogTask(void * argument)
 						++(logs[j].sampleCount);				// Advance one sample
 					}
 				}
+				
 				flag = 0;			// Reset this flag for index
 				/* Reset the rate counter */
 				if (rateCounter >= (configTICK_RATE_HZ/logs[j].rate))	
@@ -347,50 +349,50 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 			break;
 		
 		case MEMORY_DATA_UINT8:
-			if (*(__IO uint8_t *)logVars[varIndex].source != temp_uint8) {
-				temp_uint8 = *(__IO uint8_t *)logVars[varIndex].source;
+			if (*(__IO uint8_t *)logVars[varIndex].source != (uint8_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint8_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT8:
-			if (*(__IO uint8_t *)logVars[varIndex].source != temp_int8) {
-				temp_int8 = *(__IO uint8_t *)logVars[varIndex].source;
+			if (*(__IO uint8_t *)logVars[varIndex].source != (int8_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint8_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_UINT16:
-			if (*(__IO uint16_t *)logVars[varIndex].source != temp_uint16) {
-				temp_uint16 = *(__IO uint16_t *)logVars[varIndex].source;
+			if (*(__IO uint16_t *)logVars[varIndex].source != (uint16_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint16_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT16:
-			if (*(__IO uint16_t *)logVars[varIndex].source != temp_int16) {
-				temp_int16 = *(__IO uint16_t *)logVars[varIndex].source;
+			if (*(__IO uint16_t *)logVars[varIndex].source != (int16_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint16_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_UINT32:
-			if (*(__IO uint32_t *)logVars[varIndex].source != temp_uint32) {
-				temp_uint32 = *(__IO uint32_t *)logVars[varIndex].source;
+			if (*(__IO uint32_t *)logVars[varIndex].source != (uint32_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT32:
-			if (*(__IO uint32_t *)logVars[varIndex].source != temp_int32) {
-				temp_int32 = *(__IO uint32_t *)logVars[varIndex].source;
+			if (*(__IO uint32_t *)logVars[varIndex].source != (int32_t)*ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_FLOAT:
-			if (*(__IO float *)logVars[varIndex].source != temp_float) {
-				temp_float = *(__IO float *)logVars[varIndex].source;
+			if (*(__IO float *)logVars[varIndex].source != *ptemp_float[varIndex]) {
+				*ptemp_float[varIndex] = *(__IO float *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
@@ -490,13 +492,13 @@ Module_Status CreateLog(const char* logName, logType_t type, float rate, delimit
 			/* Write log header */
 			strncpy(name, modulePNstring[4], 5); name[5] = 0;				// Copy only module PN
 			sprintf( ( char * ) buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, name);
-			res = f_write(&MyFile, buffer, sizeof(logHeaderText1), (void *)&byteswritten);
+			res = f_write(&MyFile, buffer, strlen(logHeaderText1), (void *)&byteswritten);
 			memset(buffer, 0, byteswritten);
 			if(type == RATE) {
 				sprintf( ( char * ) buffer, logHeaderText2, rate);
-				res = f_write(&MyFile, buffer, sizeof(logHeaderText2), (void *)&byteswritten);				
+				res = f_write(&MyFile, buffer, strlen(logHeaderText2), (void *)&byteswritten);				
 			} else if (type == EVENT) {
-				res = f_write(&MyFile, logHeaderText3, sizeof(logHeaderText3), (void *)&byteswritten);	
+				res = f_write(&MyFile, logHeaderText3, strlen(logHeaderText3), (void *)&byteswritten);	
 			}
 			memset(buffer, 0, byteswritten);
 			
@@ -536,6 +538,24 @@ Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, co
 					logVars[i].source = source;
 					logVars[i].logIndex = j;
 					logVars[i].varLabel = ColumnLabel;
+					
+					/* Alocate memory for temporary old value variables */
+					if( logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT8)
+						ptemp_float[i] = (float*)malloc(sizeof(uint8_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT8)
+						ptemp_float[i] = (float*)malloc(sizeof(int8_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT16)
+						ptemp_float[i] = (float*)malloc(sizeof(uint16_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT16)
+						ptemp_float[i] = (float*)malloc(sizeof(int16_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT32)
+						ptemp_float[i] = (float*)malloc(sizeof(uint32_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT32)
+						ptemp_float[i] = (float*)malloc(sizeof(int32_t));
+					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_FLOAT)
+						ptemp_float[i] = (float*)malloc(sizeof(float));
+					if (ptemp_float[i] == NULL)
+						return H05R0_ERR_MemoryFull;
 					
 					/* Write delimiter */
 					OpenThisLog(j);
@@ -671,7 +691,9 @@ Module_Status DeleteLog(const char* logName, options_t options)
 {
 	Module_Status result = H05R0_OK;
 
-
+	
+	// Free ptemp vars
+	
 	return result;	
 }
 

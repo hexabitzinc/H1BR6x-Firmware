@@ -145,6 +145,7 @@ typedef enum
 	H05R0_ERR_MaxLogVars,
 	H05R0_ERR_LogDoesNotExist,
 	H05R0_ERR_LogIsNotActive,
+	H05R0_ERR_MemoryFull,
 	H05R0_ERROR = 255
 } Module_Status;
 
