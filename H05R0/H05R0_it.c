@@ -32,7 +32,7 @@
   */
 	
 /*
-		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.0 - Copyright (C) 2017 Hexabitz
+		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.1 - Copyright (C) 2017 Hexabitz
     All rights reserved
 */
 
@@ -46,8 +46,6 @@
 extern xTaskHandle xCommandConsoleTaskHandle;
 extern TaskHandle_t FrontEndTaskHandle;
 extern void NotifyMessagingTaskFromISR(uint8_t port);
-
-extern UBaseType_t uxHighWaterMark;
 
 /******************************************************************************/
 /*            Cortex-M0 Processor Interruption and Exception Handlers         */ 
@@ -289,8 +287,6 @@ void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName 
 	( void ) pcTaskName;
 	( void ) pxTask;
 
-	
-	uxHighWaterMark = uxTaskGetStackHighWaterMark( FrontEndTaskHandle );
 	
 	/* Run time stack overflow checking is performed if
 	configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2.  This hook

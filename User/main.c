@@ -32,18 +32,13 @@
   */
 	
 /*
-		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.0 - Copyright (C) 2017 Hexabitz
+		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.1 - Copyright (C) 2017 Hexabitz
     All rights reserved
 */
 
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
 
-/* Include a predefined topology here */
-//#include "topology_ex.h"
-
-
-UBaseType_t uxHighWaterMark;
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -95,30 +90,6 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-//	const char* mylog = "MemLog22";
-//	uint8_t var1 = 120, var2 = 54, var3 = 11;
-//	
-//	//EE_Format();
-//	
-//	AddPortButton(MOMENTARY_NO, P3);			// Fix EE load
-//	
-//	SetButtonEvents(P3, 1, 1, 1, 3, 0, 2, 0, 0);
-//	
-//	if (CreateLog(mylog, EVENT, 10, FMT_TAB, FMT_SAMPLE, "Sample") == H05R0_OK)
-//	{	
-//		if (LogVar(mylog, PORT_BUTTON, B3, "Switch 3 (E-stop)") == H05R0_OK)
-//		//if (LogVar(mylog, MEMORY_DATA_UINT8, (uint32_t)&var1, "Var 1") == H05R0_OK)
-//		{		
-//			LogVar(mylog, MEMORY_DATA_UINT8, (uint32_t)&var2, "Var 2");
-//			LogVar(mylog, MEMORY_DATA_UINT8, (uint32_t)&var3, "Var 3");
-//			StartLog(mylog);
-//			
-//			Delay_s(30);
-//			
-//			StopLog(mylog);			
-//			
-//		}			
-//	}
 	
   /* Infinite loop */
   for(;;)
