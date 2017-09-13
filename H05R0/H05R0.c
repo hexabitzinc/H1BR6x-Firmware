@@ -554,7 +554,10 @@ Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, co
 						ptemp_float[i] = (float*)malloc(sizeof(int32_t));
 					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_FLOAT)
 						ptemp_float[i] = (float*)malloc(sizeof(float));
-					if (ptemp_float[i] == NULL)
+					/* Check memory was alocated */
+					if (logs[j].type == EVENT && (logVars[i].type == MEMORY_DATA_UINT8 || logVars[i].type == MEMORY_DATA_INT8 || \
+						logVars[i].type == MEMORY_DATA_UINT16 || logVars[i].type == MEMORY_DATA_INT16 ||logVars[i].type == MEMORY_DATA_UINT32 || \
+						logVars[i].type == MEMORY_DATA_INT32 || logVars[i].type == MEMORY_DATA_FLOAT) && ptemp_float[i] == NULL)
 						return H05R0_ERR_MemoryFull;
 					
 					/* Write delimiter */
