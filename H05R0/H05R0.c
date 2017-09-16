@@ -437,7 +437,7 @@ Module_Status OpenThisLog(uint16_t logindex)
 */
 
 /* --- Create a new data log. 
-				logName: Log file name. Max 10 char. If log already exists, a new column will be added.
+				logName: Log file name. Max 10 char. 
 				type: RATE or EVENT
 				rate: data rate in Hz (max 1000 Hz).
 				delimiterFormat: FMT_SPACE, FMT_TAB, FMT_COMMA
