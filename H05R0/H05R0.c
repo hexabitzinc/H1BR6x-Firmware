@@ -514,7 +514,7 @@ Module_Status CreateLog(const char* logName, logType_t type, float rate, delimit
 
 /*-----------------------------------------------------------*/
 
-/* --- Save data from a port to an existing data log. 
+/* --- Save data from a source to an existing data log. 
 				logName: Log file name.
 				type: PORT_DIGITAL, PORT_DATA, PORT_BUTTON, MEMORY_DATA.
 				source: data source. Ports (P1-Px), buttons (B1-Bx) or memory location.
