@@ -156,7 +156,6 @@ void LogTask(void * argument)
 	for(;;)
 	{
 		++rateCounter;											// Advance rate counter
-		deferButtonReset = 1;								// Defer button state reset until it's logged here
 		
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
@@ -250,7 +249,6 @@ void LogTask(void * argument)
 										f_write(&MyFile, buffer, strlen((const char *)buffer), (void *)&byteswritten); break;
 									default: break;
 								}		
-								deferButtonReset = 0; 
 								break;
 							
 							case PORT_DATA:
