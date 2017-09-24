@@ -49,6 +49,8 @@ uint16_t myuint16 = 3400;
 int16_t myint16 = -5999;
 uint32_t myuint32 = 133234;
 int32_t myint32 = -500912;
+volatile bool bool1 = true;
+volatile float float2 = -12.5;
 #endif
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,12 +101,14 @@ int main(void)
 void FrontEndTask(void * argument)
 {
 #if _module == 1
-	volatile float myremotevar = 0;
-	varFormat_t format = FMT_UINT32;	
+	volatile bool mybool;
+	volatile float myfloat;
+	varFormat_t format1, format2;	
 #endif	
 	
 #if _module == 2	
-	++myfloat;
+	AddBOSvar(FMT_BOOL, (uint32_t) &bool1);
+	AddBOSvar(FMT_FLOAT, (uint32_t) &float2);
 #endif	
 	
   /* Infinite loop */
@@ -112,6 +116,10 @@ void FrontEndTask(void * argument)
   {
 	#if _module == 1
 	
+		mybool = *(bool *)ReadRemoteVar(2, 1, &format1, 100);
+		Delay_ms(10);
+		myfloat = *(float *)ReadRemoteVar(2, 2, &format2, 100);
+		
 		//myremotevar += 1;
 //	myremotevar = ReadRemoteMemory(2, 0x20000028, FMT_UINT32, 100);
 //	Delay_ms(10);
@@ -125,11 +133,24 @@ void FrontEndTask(void * argument)
 //	Delay_ms(10);
 //	myremotevar = ReadRemoteMemory(2, 0x20000021, FMT_INT8, 100);
 //	Delay_ms(10);
-	myremotevar = *(float *)ReadRemoteMemory(2, 0x2000001c, FMT_FLOAT, 1000);
-	Delay_ms(10);
+//	myremotevar = *(float *)ReadRemoteMemory(2, 0x2000001c, FMT_FLOAT, 1000);
+//	Delay_ms(10);
 		
 	Delay_ms(1000);
 	
+	#endif
+	
+	#if _module == 2	
+	
+		++float2;
+		
+		if (bool1)
+			bool1 = false;
+		else
+			bool1 = true;
+		
+		Delay_ms(300);
+		
 	#endif
 	}
 }
