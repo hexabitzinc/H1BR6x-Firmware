@@ -41,7 +41,15 @@
 
 
 /* Private variables ---------------------------------------------------------*/
-
+#if _module == 2
+float myfloat = -234.15;
+uint8_t myuint8 = 200;
+int8_t myint8 = -50;
+uint16_t myuint16 = 3400;
+int16_t myint16 = -5999;
+uint32_t myuint32 = 133234;
+int32_t myint32 = -500912;
+#endif
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -91,18 +99,35 @@ int main(void)
 void FrontEndTask(void * argument)
 {
 #if _module == 1
-	uint32_t *myremotevar;
+	volatile float myremotevar = 0;
 	varFormat_t format = FMT_UINT32;	
 #endif	
 	
+#if _module == 2	
+	++myfloat;
+#endif	
 	
   /* Infinite loop */
   for(;;)
   {
 	#if _module == 1
 	
-	myremotevar = ReadRemoteMemory(2, 0x08000000, format, 100);
-	
+		//myremotevar += 1;
+//	myremotevar = ReadRemoteMemory(2, 0x20000028, FMT_UINT32, 100);
+//	Delay_ms(10);
+//	myremotevar = ReadRemoteMemory(2, 0x2000002c, FMT_INT32, 100);
+//	Delay_ms(10);
+//	myremotevar = ReadRemoteMemory(2, 0x20000022, FMT_UINT16, 100);
+//	Delay_ms(10);
+//	myremotevar = ReadRemoteMemory(2, 0x20000024, FMT_INT16, 100);
+//	Delay_ms(10);
+//	myremotevar = ReadRemoteMemory(2, 0x20000020, FMT_UINT8, 100);
+//	Delay_ms(10);
+//	myremotevar = ReadRemoteMemory(2, 0x20000021, FMT_INT8, 100);
+//	Delay_ms(10);
+	myremotevar = *(float *)ReadRemoteMemory(2, 0x2000001c, FMT_FLOAT, 1000);
+	Delay_ms(10);
+		
 	Delay_ms(1000);
 	
 	#endif
