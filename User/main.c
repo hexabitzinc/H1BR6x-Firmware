@@ -90,11 +90,22 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
+#if _module == 1
+	uint32_t *myremotevar;
+	varFormat_t format = FMT_UINT32;	
+#endif	
+	
 	
   /* Infinite loop */
   for(;;)
   {
-
+	#if _module == 1
+	
+	myremotevar = ReadRemoteMemory(2, 0x08000000, format, 100);
+	
+	Delay_ms(1000);
+	
+	#endif
 	}
 }
 

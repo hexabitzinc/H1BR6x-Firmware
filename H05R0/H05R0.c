@@ -74,33 +74,33 @@ void Module_Init(void)
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
 	
-	/* uSD - GPIO and SPI */
-	if (BSP_SD_Init() == MSD_ERROR)
-	{
-		/* No SD card. Insert SD card and reboot */
-		while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };		
-	}	
-	
-	/* Get the uSD size and info */
-	BSP_SD_GetCardInfo(&CardInfo);
-	
-	/* Link the micro SD disk I/O driver */
-  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
-  {
-    /* Mount the default drive */
-    if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
-    {
-			/* Unmount the drive */
-			f_mount(0, SDPath, 0); 
-      /* SD card malfunction. Re-insert the card and reboot */
-			while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };	
-    }
-    else
-    {		
-			/* Create the logging task */
-			xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);			
-		}
-	}
+//	/* uSD - GPIO and SPI */
+//	if (BSP_SD_Init() == MSD_ERROR)
+//	{
+//		/* No SD card. Insert SD card and reboot */
+//		while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };		
+//	}	
+//	
+//	/* Get the uSD size and info */
+//	BSP_SD_GetCardInfo(&CardInfo);
+//	
+//	/* Link the micro SD disk I/O driver */
+//  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+//  {
+//    /* Mount the default drive */
+//    if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
+//    {
+//			/* Unmount the drive */
+//			f_mount(0, SDPath, 0); 
+//      /* SD card malfunction. Re-insert the card and reboot */
+//			while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };	
+//    }
+//    else
+//    {		
+//			/* Create the logging task */
+//			xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);			
+//		}
+//	}
 	
 }
 /*-----------------------------------------------------------*/
