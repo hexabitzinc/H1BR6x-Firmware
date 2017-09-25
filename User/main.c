@@ -32,7 +32,7 @@
   */
 	
 /*
-		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.1 - Copyright (C) 2017 Hexabitz
+		MODIFIED by Hexabitz for BitzOS (BOS) V0.1.2 - Copyright (C) 2017 Hexabitz
     All rights reserved
 */
 
@@ -41,17 +41,7 @@
 
 
 /* Private variables ---------------------------------------------------------*/
-#if _module == 2
-float myfloat = -234.15;
-uint8_t myuint8 = 200;
-int8_t myint8 = -50;
-uint16_t myuint16 = 3400;
-int16_t myint16 = -5999;
-uint32_t myuint32 = 133234;
-int32_t myint32 = -500912;
-volatile bool bool1 = true;
-volatile float float2 = -12.5;
-#endif
+
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -100,68 +90,12 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-#if _module == 1
-	volatile uint32_t mynum = 0x12ABCDEF;
-	volatile float myfloat;
-	const float constf = 6543.21;
-	Delay_ms(500);
-	WriteRemote(2, (uint32_t) &mynum, 0x08016000, FMT_UINT32, 100);
-#endif	
-	
-#if _module == 2	
-	AddBOSvar(FMT_BOOL, (uint32_t) &bool1);
-	AddBOSvar(FMT_FLOAT, (uint32_t) &float2);
-#endif	
-	
+
   /* Infinite loop */
   for(;;)
   {
-	#if _module == 1
-	
-//		mybool = *(bool *)ReadRemoteVar(2, 1, &format1, 100);
-//		Delay_ms(10);
-//		myfloat = *(float *)ReadRemoteVar(2, 2, &format2, 100);
 
-//		WriteRemote(2, (uint32_t) &mybool, 1, FMT_BOOL, 0);
-//		Delay_ms(10);
-//		WriteRemote(2, (uint32_t) &constf, 2, FMT_FLOAT, 100);
-
-		//WriteRemote(2, (uint32_t) &mynum, 0x08016000, FMT_UINT32, 100);
-		Delay_ms(10);
-		WriteRemote(2, (uint32_t) &constf, 0x20000034, FMT_FLOAT, 0);
-		
-		//myremotevar += 1;
-//	myremotevar = ReadRemoteMemory(2, 0x20000028, FMT_UINT32, 100);
-//	Delay_ms(10);
-//	myremotevar = ReadRemoteMemory(2, 0x2000002c, FMT_INT32, 100);
-//	Delay_ms(10);
-//	myremotevar = ReadRemoteMemory(2, 0x20000022, FMT_UINT16, 100);
-//	Delay_ms(10);
-//	myremotevar = ReadRemoteMemory(2, 0x20000024, FMT_INT16, 100);
-//	Delay_ms(10);
-//	myremotevar = ReadRemoteMemory(2, 0x20000020, FMT_UINT8, 100);
-//	Delay_ms(10);
-//	myremotevar = ReadRemoteMemory(2, 0x20000021, FMT_INT8, 100);
-//	Delay_ms(10);
-//	myremotevar = *(float *)ReadRemoteMemory(2, 0x2000001c, FMT_FLOAT, 1000);
-//	Delay_ms(10);
-		
-	Delay_ms(1000);
 	
-	#endif
-	
-	#if _module == 2	
-	
-		++float2;
-		
-		if (bool1)
-			bool1 = false;
-		else
-			bool1 = true;
-		
-		Delay_ms(10);
-		
-	#endif
 	}
 }
 
