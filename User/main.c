@@ -101,9 +101,9 @@ int main(void)
 void FrontEndTask(void * argument)
 {
 #if _module == 1
-	volatile bool mybool;
+	volatile bool mybool = true;
 	volatile float myfloat;
-	varFormat_t format1, format2;	
+	const float constf = 1234.5;
 #endif	
 	
 #if _module == 2	
@@ -116,9 +116,13 @@ void FrontEndTask(void * argument)
   {
 	#if _module == 1
 	
-		mybool = *(bool *)ReadRemoteVar(2, 1, &format1, 100);
+//		mybool = *(bool *)ReadRemoteVar(2, 1, &format1, 100);
+//		Delay_ms(10);
+//		myfloat = *(float *)ReadRemoteVar(2, 2, &format2, 100);
+
+		WriteRemote(2, (uint32_t) &mybool, 1, FMT_BOOL, 0);
 		Delay_ms(10);
-		myfloat = *(float *)ReadRemoteVar(2, 2, &format2, 100);
+		WriteRemote(2, (uint32_t) &constf, 2, FMT_FLOAT, 100);
 		
 		//myremotevar += 1;
 //	myremotevar = ReadRemoteMemory(2, 0x20000028, FMT_UINT32, 100);
@@ -149,7 +153,7 @@ void FrontEndTask(void * argument)
 		else
 			bool1 = true;
 		
-		Delay_ms(300);
+		Delay_ms(10);
 		
 	#endif
 	}
