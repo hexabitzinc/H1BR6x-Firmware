@@ -74,6 +74,9 @@ void Module_Init(void)
   MX_USART4_UART_Init();
   MX_USART5_UART_Init();
 	
+	/* This module needs more time to process buttons */
+	needToDelayButtonStateReset = true;
+		
 	/* uSD - GPIO and SPI */
 	if (BSP_SD_Init() == MSD_ERROR)
 	{
