@@ -598,6 +598,9 @@ Module_Status StartLog(const char* logName)
 		{
 			activeLogs |= (0x01 << j);
 			logs[j].sampleCount = 0;
+			OpenThisLog(j);
+			/* Write new line */
+			f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);
 			return H05R0_OK;
 		}		
 	}

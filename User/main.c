@@ -90,15 +90,39 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-
+	AddPortButton(MOMENTARY_NO, P1);								// Magnetic
+	SetButtonEvents(P1, 0, 0, 1, 0, 0, 1, 0, 0);
+	AddPortButton(MOMENTARY_NO, P3);								// Limit Switch 1
+	SetButtonEvents(P3, 1, 0, 3, 0, 0, 0, 0, 0);
+	AddPortButton(MOMENTARY_NO, P4);								// Limit Switch 2
+	SetButtonEvents(P4, 1, 0, 3, 0, 0, 0, 0, 0);
+	AddPortButton(MOMENTARY_NC, P5);								// Optical
+	SetButtonEvents(P5, 1, 0, 1, 0, 0, 1, 0, 0);
+	
+	/* Create log and log switches */
+	CreateLog("Rate", RATE, 10, FMT_TAB, FMT_SAMPLE, "#");
+	LogVar("Rate", PORT_BUTTON, P1, "Magnetic");
+	LogVar("Rate", PORT_BUTTON, P3, "LS1");
+	LogVar("Rate", PORT_BUTTON, P4, "LS2");
+	LogVar("Rate", PORT_BUTTON, P5, "Optical");
+		
+	IND_ON(); 
+	
+	StartLog("Rate");
+	Delay_s(30);	
+	StopLog("Rate");
+	
+	IND_OFF();				// Signal the end of the log
+	Delay_ms(300); IND_blink(200);		
+	Delay_ms(300); IND_blink(200);
+	
+	
   /* Infinite loop */
   for(;;)
   {
 
-	
 	}
 }
-
 
 /*-----------------------------------------------------------*/
 
