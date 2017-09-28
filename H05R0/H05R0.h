@@ -1,5 +1,5 @@
 /*
-    BitzOS (BOS) V0.1.1 - Copyright (C) 2017 Hexabitz
+    BitzOS (BOS) V0.1.2 - Copyright (C) 2017 Hexabitz
     All rights reserved
 		
     File Name     : H05R0.c
@@ -168,6 +168,7 @@ typedef struct
 	const char* indexColumnLabel;
 	uint32_t sampleCount;
 	uint32_t filePtr;
+	uint32_t t0;
 } 
 log_t;
 
