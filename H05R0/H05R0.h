@@ -168,6 +168,7 @@ typedef struct
 	const char* indexColumnLabel;
 	uint32_t sampleCount;
 	uint32_t filePtr;
+	uint32_t t0;
 } 
 log_t;
 
