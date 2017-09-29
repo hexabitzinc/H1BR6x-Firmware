@@ -571,6 +571,8 @@ Module_Status StartLog(const char* logName)
 			logs[j].sampleCount = 0;
 			logs[j].t0 = HAL_GetTick();
 			OpenThisLog(j);
+			/* Write new line */
+			f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);
 			return H05R0_OK;
 		}		
 	}
