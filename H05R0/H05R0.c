@@ -53,8 +53,83 @@ Module_Status OpenThisLog(uint16_t logindex);
 
 /* Create CLI commands --------------------------------------------------------*/
 
+portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
+portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
-
+/* CLI command structure : addlog */
+static const CLI_Command_Definition_t addLogCommandDefinition =
+{
+	( const int8_t * ) "addlog", /* The command string to type. */
+	( const int8_t * ) "addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
+delimiter format (3rd par.): 'space', 'tab' or 'comma'; index column format (3rd par.): 'none', 'sample' or 'time'; \
+and index column label text (4th par.)\r\n\r\n",
+	addLogCommand, /* The function to run. */
+	4 /* Four parameters are expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : logvar */
+static const CLI_Command_Definition_t logVarCommandDefinition =
+{
+	( const int8_t * ) "logvar", /* The command string to type. */
+	( const int8_t * ) "logvar:\r\n Add a new log variable to an existing log (1st par.). Specify variable type (2nd and 3rd par.): \
+'port digital', 'port data', 'port button', 'memory uint8', 'memory int8', 'memory uint16', 'memory int16', 'memory uint32', \
+'memory int32', 'memory float' ; source (4th par.): ports 'p1'..'px', buttons 'b1'..'bx' or memory location (Flash or RAM); \
+and column label text (5th par.)\r\n\r\n",
+	logVarCommand, /* The function to run. */
+	5 /* Five parameters are expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : deletelog */
+static const CLI_Command_Definition_t deletelogCommandDefinition =
+{
+	( const int8_t * ) "deletelog", /* The command string to type. */
+	( const int8_t * ) "deletelog:\r\n Delete a log file. Specifiy log name (1st par.) and delete options (2nd par.): 'all' or \
+'keepdisk' to keep log on the uSD card\r\n\r\n",
+	deleteLogCommand, /* The function to run. */
+	2 /* Two parameters are expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : start */
+static const CLI_Command_Definition_t startCommandDefinition =
+{
+	( const int8_t * ) "start", /* The command string to type. */
+	( const int8_t * ) "start:\r\n Start the log with log name (1st par.)\r\n\r\n",
+	startCommand, /* The function to run. */
+	1 /* One parameter is expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : stop */
+static const CLI_Command_Definition_t stopCommandDefinition =
+{
+	( const int8_t * ) "stop", /* The command string to type. */
+	( const int8_t * ) "stop:\r\n Stop the log with log name (1st par.)\r\n\r\n",
+	stopCommand, /* The function to run. */
+	1 /* One parameter is expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : pause */
+static const CLI_Command_Definition_t pauseCommandDefinition =
+{
+	( const int8_t * ) "pause", /* The command string to type. */
+	( const int8_t * ) "pause:\r\n Pause the log with log name (1st par.)\r\n\r\n",
+	pauseCommand, /* The function to run. */
+	1 /* One parameter is expected. */
+};
+/*-----------------------------------------------------------*/
+/* CLI command structure : resume */
+static const CLI_Command_Definition_t resumeCommandDefinition =
+{
+	( const int8_t * ) "resume", /* The command string to type. */
+	( const int8_t * ) "resume:\r\n Resume the log with log name (1st par.)\r\n\r\n",
+	resumeCommand, /* The function to run. */
+	1 /* One parameter is expected. */
+};
+/*-----------------------------------------------------------*/
 
 /* -----------------------------------------------------------------------
 	|												 Private Functions	 														|

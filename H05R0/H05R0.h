@@ -233,7 +233,13 @@ extern Module_Status DeleteLog(const char* logName, options_t options);
    ----------------------------------------------------------------------- 
 */
 
-
+extern const CLI_Command_Definition_t addLogCommandDefinition;
+extern const CLI_Command_Definition_t deleteLogCommandDefinition;
+extern const CLI_Command_Definition_t logVarCommandDefinition;
+extern const CLI_Command_Definition_t startLogCommandDefinition;
+extern const CLI_Command_Definition_t stopLogCommandDefinition;
+extern const CLI_Command_Definition_t pauseLogCommandDefinition;
+extern const CLI_Command_Definition_t resumeLogCommandDefinition;
 
 
 #endif /* H05R0_H */
