@@ -66,10 +66,10 @@ static const CLI_Command_Definition_t addLogCommandDefinition =
 {
 	( const int8_t * ) "addlog", /* The command string to type. */
 	( const int8_t * ) "addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
-delimiter format (3rd par.): 'space', 'tab' or 'comma'; index column format (3rd par.): 'none', 'sample' or 'time'; \
-and index column label text (4th par.)\r\n\r\n",
+rate (3rd par.): logging rate in Hz (max 1kHz), delimiter format (4th par.): 'space', 'tab' or 'comma'; index column format \
+(5th par.): 'none', 'sample' or 'time'; and index column label text (6th par.)\r\n\r\n",
 	addLogCommand, /* The function to run. */
-	4 /* Four parameters are expected. */
+	6 /* Six parameters are expected. */
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : logvar */
@@ -759,7 +759,103 @@ Module_Status DeleteLog(const char* logName, options_t options)
    ----------------------------------------------------------------------- 
 */
 
+portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1, *pcParameterString2, *pcParameterString3, *pcParameterString4, *pcParameterString5, *pcParameterString6; 
+	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
+	portBASE_TYPE xParameterStringLength4 = 0, xParameterStringLength5 = 0, xParameterStringLength6 = 0;
+	logType_t type; delimiterFormat_t dformat; indexColumnFormat_t iformat; float rate;
+	static const int8_t *pcOKMessage = ( int8_t * ) "Log created successfully\r\n";
+	static const int8_t *pcWrongValue = ( int8_t * ) "Log creation failed. Wrong parameters\r\n";
+	static const int8_t *pcLogExists = ( int8_t * ) "Log creation failed. Log name already exists\r\n";
+	static const int8_t *pcSDerror = ( int8_t * ) "Log creation failed. SD card error\r\n";
+	static const int8_t *pcMaxLogs = ( int8_t * ) "Log creation failed. Maximum number of logs reached\r\n";
+	
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+	/* Obtain the 2nd parameter string: log type */
+	pcParameterString2 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 2, &xParameterStringLength2);
+	/* Obtain the 3rd parameter string: log rate */
+	pcParameterString3 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 3, &xParameterStringLength3);
+	/* Obtain the 4th parameter string: delimiter format */
+	pcParameterString4 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 4, &xParameterStringLength4);
+	/* Obtain the 5th parameter string: index format */
+	pcParameterString5 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 5, &xParameterStringLength5);
+	/* Obtain the 6th parameter string: index label */
+	pcParameterString6 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 6, &xParameterStringLength6);
+	
+	/* log name */
+	pcParameterString1[xParameterStringLength1] = 0;		// Get rid of the remaining parameters
+	
+	/* type */
+	if (!strncmp((const char *)pcParameterString2, "rate", xParameterStringLength2))
+		type = RATE;
+	else if (!strncmp((const char *)pcParameterString2, "event", xParameterStringLength2))
+		type = EVENT;		
+	else
+		result = H05R0_ERR_WrongParams;
+	
+	/* rate */
+	rate = atof( ( const char * ) pcParameterString3 );
+	if (rate < 0.0f || rate > 1000.0f)
+		result = H05R0_ERR_WrongParams;
+	
+	/* delimiter format */
+	if (!strncmp((const char *)pcParameterString4, "space", xParameterStringLength4))
+		dformat = FMT_SPACE;
+	else if (!strncmp((const char *)pcParameterString4, "tab", xParameterStringLength4))
+		dformat = FMT_TAB;		
+	else if (!strncmp((const char *)pcParameterString4, "comma", xParameterStringLength4))
+		dformat = FMT_COMMA;		
+	else
+		result = H05R0_ERR_WrongParams;
+	
+	/* index format */
+	if (!strncmp((const char *)pcParameterString5, "sample", xParameterStringLength5))
+		iformat = FMT_SAMPLE;
+	else if (!strncmp((const char *)pcParameterString5, "time", xParameterStringLength5))
+		iformat = FMT_TIME;		
+	else if (!strncmp((const char *)pcParameterString5, "none", xParameterStringLength5))
+		iformat = FMT_NONE;		
+	else
+		result = H05R0_ERR_WrongParams;
 
+	/* index name */
+	pcParameterString6[xParameterStringLength6] = 0;		// Get rid of the remaining parameters
+
+	
+	/* Create the log */
+	if (result == H05R0_OK) {
+		result = CreateLog((const char *)pcParameterString1, type, rate, dformat, iformat, (const char *)pcParameterString6);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage);
+	} else if (result == H05R0_ERR_WrongParams) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
+	} else if (result ==  H05R0_ERR_LogNameExists) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogExists);
+	} else if (result ==  H05R0_ERR_SD) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcSDerror);
+	} else if (result ==  H05R0_ERR_MaxLogs) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMaxLogs);
+	}
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 
