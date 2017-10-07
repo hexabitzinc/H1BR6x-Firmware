@@ -857,6 +857,157 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 /*-----------------------------------------------------------*/
 
+portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1, *pcParameterString2; 
+	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0; 
+	options_t options; 
+	static const int8_t *pcOKMessage1 = ( int8_t * ) "Log deleted both internally and from the disk\r\n";
+	static const int8_t *pcOKMessage2 = ( int8_t * ) "Log deleted internally and kept on the disk\r\n";
+	static const int8_t *pcWrongValue = ( int8_t * ) "Log deletion failed. Wrong parameters\r\n";
+
+	
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+	/* Obtain the 2nd parameter string: delete options */
+	pcParameterString2 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 2, &xParameterStringLength2);
+	
+	/* log name */
+	pcParameterString1[xParameterStringLength1] = 0;		// Get rid of the remaining parameters
+	
+	/* type */
+	if (!strncmp((const char *)pcParameterString2, "all", xParameterStringLength2))
+		options = DELETE_ALL;
+	else if (!strncmp((const char *)pcParameterString2, "keepdisk", xParameterStringLength2))
+		options = KEEP_ON_DISK;		
+	else
+		result = H05R0_ERR_WrongParams;
+
+	/* Delete the log */
+	if (result == H05R0_OK) {
+		result = DeleteLog((const char *)pcParameterString1, options);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK && options == DELETE_ALL) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage1);
+	} else if (result == H05R0_OK && options == KEEP_ON_DISK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage2);
+	} else if (result == H05R0_ERR_WrongParams) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
+	} 
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+
+portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1, *pcParameterString2, *pcParameterString3, *pcParameterString4, *pcParameterString5; 
+	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
+	portBASE_TYPE xParameterStringLength4 = 0, xParameterStringLength5 = 0;
+	logVarType_t type; uint32_t source; 
+	static const int8_t *pcOKMessage = ( int8_t * ) "Variable added to log successfully\r\n";
+	static const int8_t *pcWrongValue = ( int8_t * ) "Variable was not added to log. Wrong parameters\r\n";
+	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Variable was not added to log. Log does not exist\r\n";
+	static const int8_t *pcMemoryFull = ( int8_t * ) "Variable was not added to log. Internal memory full\r\n";
+	static const int8_t *pcMaxLogVars = ( int8_t * ) "Variable was not added to log. Maximum number of logged variables reached\r\n";
+	
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+	/* Obtain the 2nd parameter string: variable type 1 */
+	pcParameterString2 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 2, &xParameterStringLength2);
+	/* Obtain the 3rd parameter string: variable type 2 */
+	pcParameterString3 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 3, &xParameterStringLength3);
+	/* Obtain the 4th parameter string: variable source */
+	pcParameterString4 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 4, &xParameterStringLength4);
+	/* Obtain the 5th parameter string: variable column label */
+	pcParameterString5 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 5, &xParameterStringLength5);
+	
+	/* log name */
+	pcParameterString1[xParameterStringLength1] = 0;		// Get rid of the remaining parameters
+	
+	/* variable type */
+	if (!strncmp((const char *)pcParameterString2, "port", xParameterStringLength2)) {
+		if (!strncmp((const char *)pcParameterString3, "digital", xParameterStringLength3)) {
+			type = PORT_DIGITAL;
+		} else if (!strncmp((const char *)pcParameterString3, "data", xParameterStringLength3)) {
+			type = PORT_DATA;
+		} else if (!strncmp((const char *)pcParameterString3, "button", xParameterStringLength3)) {
+			type = PORT_BUTTON;
+		} else
+			result = H05R0_ERR_WrongParams;
+	} else if (!strncmp((const char *)pcParameterString2, "memory", xParameterStringLength2)) {
+		if (!strncmp((const char *)pcParameterString3, "uint8", xParameterStringLength3)) {
+			type = MEMORY_DATA_UINT8;
+		} else if (!strncmp((const char *)pcParameterString3, "int8", xParameterStringLength3)) {
+			type = MEMORY_DATA_INT8;
+		} else if (!strncmp((const char *)pcParameterString3, "uint16", xParameterStringLength3)) {
+			type = MEMORY_DATA_UINT16;
+		} else if (!strncmp((const char *)pcParameterString3, "int16", xParameterStringLength3)) {
+			type = MEMORY_DATA_INT16;
+		} else if (!strncmp((const char *)pcParameterString3, "uint32", xParameterStringLength3)) {
+			type = MEMORY_DATA_UINT32;
+		} else if (!strncmp((const char *)pcParameterString3, "int32", xParameterStringLength3)) {
+			type = MEMORY_DATA_INT32;
+		} else if (!strncmp((const char *)pcParameterString3, "float", xParameterStringLength3)) {
+			type = MEMORY_DATA_FLOAT;
+		} else
+			result = H05R0_ERR_WrongParams;		
+	} else
+		result = H05R0_ERR_WrongParams;
+	
+	/* source */
+	source = strtoul(( const char * ) pcParameterString4, NULL, 16); 
+	if ((source < FLASH_BASE || source > (FLASH_BASE+FLASH_SIZE)) && (source < SRAM_BASE || source > (SRAM_BASE+SRAM_SIZE)))
+		result = H05R0_ERR_WrongParams;
+
+	/* variable column label */
+	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
+
+	
+	/* Add the variable to the log */
+	if (result == H05R0_OK) {
+		result = LogVar((const char *)pcParameterString1, type, source, (const char *)pcParameterString5);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage);
+	} else if (result == H05R0_ERR_WrongParams) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
+	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
+	} else if (result ==  H05R0_ERR_MemoryFull) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMemoryFull);
+	} else if (result ==  H05R0_ERR_MaxLogVars) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMaxLogVars);
+	}
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
 /*-----------------------------------------------------------*/
 
 
