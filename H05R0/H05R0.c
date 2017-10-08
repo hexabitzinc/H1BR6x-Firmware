@@ -62,7 +62,7 @@ portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
 /* CLI command structure : addlog */
-static const CLI_Command_Definition_t addLogCommandDefinition =
+const CLI_Command_Definition_t addLogCommandDefinition =
 {
 	( const int8_t * ) "addlog", /* The command string to type. */
 	( const int8_t * ) "addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
@@ -73,7 +73,7 @@ rate (3rd par.): logging rate in Hz (max 1kHz), delimiter format (4th par.): 'sp
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : logvar */
-static const CLI_Command_Definition_t logVarCommandDefinition =
+const CLI_Command_Definition_t logVarCommandDefinition =
 {
 	( const int8_t * ) "logvar", /* The command string to type. */
 	( const int8_t * ) "logvar:\r\n Add a new log variable to an existing log (1st par.). Specify variable type (2nd and 3rd par.): \
@@ -85,7 +85,7 @@ and column label text (5th par.)\r\n\r\n",
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : deletelog */
-static const CLI_Command_Definition_t deletelogCommandDefinition =
+const CLI_Command_Definition_t deleteLogCommandDefinition =
 {
 	( const int8_t * ) "deletelog", /* The command string to type. */
 	( const int8_t * ) "deletelog:\r\n Delete a log file. Specifiy log name (1st par.) and delete options (2nd par.): 'all' or \
@@ -95,7 +95,7 @@ static const CLI_Command_Definition_t deletelogCommandDefinition =
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : start */
-static const CLI_Command_Definition_t startCommandDefinition =
+const CLI_Command_Definition_t startCommandDefinition =
 {
 	( const int8_t * ) "start", /* The command string to type. */
 	( const int8_t * ) "start:\r\n Start the log with log name (1st par.)\r\n\r\n",
@@ -104,7 +104,7 @@ static const CLI_Command_Definition_t startCommandDefinition =
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : stop */
-static const CLI_Command_Definition_t stopCommandDefinition =
+const CLI_Command_Definition_t stopCommandDefinition =
 {
 	( const int8_t * ) "stop", /* The command string to type. */
 	( const int8_t * ) "stop:\r\n Stop the log with log name (1st par.)\r\n\r\n",
@@ -113,7 +113,7 @@ static const CLI_Command_Definition_t stopCommandDefinition =
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : pause */
-static const CLI_Command_Definition_t pauseCommandDefinition =
+const CLI_Command_Definition_t pauseCommandDefinition =
 {
 	( const int8_t * ) "pause", /* The command string to type. */
 	( const int8_t * ) "pause:\r\n Pause the log with log name (1st par.)\r\n\r\n",
@@ -122,7 +122,7 @@ static const CLI_Command_Definition_t pauseCommandDefinition =
 };
 /*-----------------------------------------------------------*/
 /* CLI command structure : resume */
-static const CLI_Command_Definition_t resumeCommandDefinition =
+const CLI_Command_Definition_t resumeCommandDefinition =
 {
 	( const int8_t * ) "resume", /* The command string to type. */
 	( const int8_t * ) "resume:\r\n Resume the log with log name (1st par.)\r\n\r\n",
@@ -1017,5 +1017,157 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 /*-----------------------------------------------------------*/
 
+portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1; 
+	portBASE_TYPE xParameterStringLength1 = 0;  
+	static const int8_t *pcOKMessage = ( int8_t * ) "%s started logging\r\n";
+	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Log does not exist\r\n";
+
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+
+	/* Start the log */
+	if (result == H05R0_OK) {
+		result = StartLog((const char *)pcParameterString1);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
+	} 
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1; 
+	portBASE_TYPE xParameterStringLength1 = 0;  
+	static const int8_t *pcOKMessage = ( int8_t * ) "%s stoped logging\r\n";
+	static const int8_t *pcIsNotActive = ( int8_t * ) "%s was not running\r\n";
+	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Log does not exist\r\n";
+
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+
+	/* Stop the log */
+	if (result == H05R0_OK) {
+		result = StopLog((const char *)pcParameterString1);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogIsNotActive) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcIsNotActive, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
+	} 
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+
+portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1; 
+	portBASE_TYPE xParameterStringLength1 = 0; 
+	static const int8_t *pcOKMessage = ( int8_t * ) "%s paused logging\r\n";
+	static const int8_t *pcIsNotActive = ( int8_t * ) "%s was not running\r\n";
+	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Log does not exist\r\n";
+
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+
+	/* Pause the log */
+	if (result == H05R0_OK) {
+		result = PauseLog((const char *)pcParameterString1);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogIsNotActive) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcIsNotActive, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
+	}  
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
+
+portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	Module_Status result = H05R0_OK;
+	
+	int8_t *pcParameterString1; 
+	portBASE_TYPE xParameterStringLength1 = 0; 
+	static const int8_t *pcOKMessage = ( int8_t * ) "%s resumed logging\r\n";
+	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Log does not exist\r\n";
+
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+	
+	/* Obtain the 1st parameter string: log name */
+	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
+
+	/* Resume the log */
+	if (result == H05R0_OK) {
+		result = ResumeLog((const char *)pcParameterString1);	
+	}
+	
+	/* Respond to the command */
+	if (result == H05R0_OK) {
+		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
+	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
+	} 
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
 
 /************************ (C) COPYRIGHT HEXABITZ *****END OF FILE****/
