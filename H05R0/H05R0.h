@@ -160,12 +160,12 @@ typedef enum { DELETE_ALL = 0, KEEP_ON_DISK } options_t;
 /* Log Struct Type Definition */  
 typedef struct
 {
-	const char* name;
+	char* name;
 	logType_t type; 
 	float rate; 
 	delimiterFormat_t delimiterFormat; 
 	indexColumnFormat_t indexColumnFormat;
-	const char* indexColumnLabel;
+	char* indexColumnLabel;
 	uint32_t sampleCount;
 	uint32_t filePtr;
 	uint32_t t0;
@@ -177,7 +177,7 @@ typedef struct
 {
 	uint8_t logIndex;
 	logVarType_t type;
-	const char* varLabel;
+	char* varLabel;
 	uint32_t source;
 } 
 logVar_t;
@@ -218,14 +218,14 @@ extern void MX_USART5_UART_Init(void);
    ----------------------------------------------------------------------- 
 */
 
-extern Module_Status CreateLog(const char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
-	const char* indexColumnLabel);
-extern Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, const char* ColumnLabel);
-extern Module_Status StartLog(const char* logName);
-extern Module_Status StopLog(const char* logName);
-extern Module_Status PauseLog(const char* logName);
-extern Module_Status ResumeLog(const char* logName);
-extern Module_Status DeleteLog(const char* logName, options_t options);
+extern Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
+	char* indexColumnLabel);
+extern Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* ColumnLabel);
+extern Module_Status StartLog(char* logName);
+extern Module_Status StopLog(char* logName);
+extern Module_Status PauseLog(char* logName);
+extern Module_Status ResumeLog(char* logName);
+extern Module_Status DeleteLog(char* logName, options_t options);
 
 
 /* -----------------------------------------------------------------------

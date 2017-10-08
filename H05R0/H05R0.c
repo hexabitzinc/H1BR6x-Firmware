@@ -66,7 +66,7 @@ const CLI_Command_Definition_t addLogCommandDefinition =
 {
 	( const int8_t * ) "addlog", /* The command string to type. */
 	( const int8_t * ) "addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
-rate (3rd par.): logging rate in Hz (max 1kHz), delimiter format (4th par.): 'space', 'tab' or 'comma'; index column format \
+rate (3rd par.): logging rate in Hz (max 1000), delimiter format (4th par.): 'space', 'tab' or 'comma'; index column format \
 (5th par.): 'none', 'sample' or 'time'; and index column label text (6th par.)\r\n\r\n",
 	addLogCommand, /* The function to run. */
 	6 /* Six parameters are expected. */
@@ -491,8 +491,8 @@ Module_Status OpenThisLog(uint16_t logindex)
 				indexColumn: FMT_SAMPLE, FMT_TIME
 				indexColumnLabel: Index Column label text. Max 30 char.
 */
-Module_Status CreateLog(const char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
-	const char* indexColumnLabel)
+Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
+	char* indexColumnLabel)
 {
 	FRESULT res; char name[15] = {0};
 	uint8_t i=0;
@@ -567,7 +567,7 @@ Module_Status CreateLog(const char* logName, logType_t type, float rate, delimit
 				source: data source. Ports (P1-Px), buttons (B1-Bx) or memory location.
 				columnLabel: Column label text. Max 30 char.
 */
-Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, const char* ColumnLabel)
+Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* ColumnLabel)
 {
 	uint8_t i = 0, j = 0;
 
@@ -633,7 +633,7 @@ Module_Status LogVar(const char* logName, logVarType_t type, uint32_t source, co
 /* --- Start an existing data log. 
 				logName: Log file name.
 */
-Module_Status StartLog(const char* logName)
+Module_Status StartLog(char* logName)
 {
 	uint8_t j = 0;
 
@@ -660,7 +660,7 @@ Module_Status StartLog(const char* logName)
 /* --- Stop a running data log. 
 				logName: Log file name.
 */
-Module_Status StopLog(const char* logName)
+Module_Status StopLog(char* logName)
 {
 	uint8_t j = 0;
 
@@ -692,7 +692,7 @@ Module_Status StopLog(const char* logName)
 /* --- Pause a running data log. 
 				logName: Log file name.
 */
-Module_Status PauseLog(const char* logName)
+Module_Status PauseLog(char* logName)
 {
 	uint8_t j = 0;
 
@@ -719,7 +719,7 @@ Module_Status PauseLog(const char* logName)
 /* --- Resume a paused data log. 
 				logName: Log file name.
 */
-Module_Status ResumeLog(const char* logName)
+Module_Status ResumeLog(char* logName)
 {
 	uint8_t j = 0;
 
@@ -742,7 +742,7 @@ Module_Status ResumeLog(const char* logName)
 				logName: Log file name.
 				options: DELETE_ALL, KEEP_ON_DISK
 */
-Module_Status DeleteLog(const char* logName, options_t options)
+Module_Status DeleteLog(char* logName, options_t options)
 {
 	Module_Status result = H05R0_OK;
 
@@ -767,11 +767,13 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
 	portBASE_TYPE xParameterStringLength4 = 0, xParameterStringLength5 = 0, xParameterStringLength6 = 0;
 	logType_t type; delimiterFormat_t dformat; indexColumnFormat_t iformat; float rate;
+	char *name, *index;
 	static const int8_t *pcOKMessage = ( int8_t * ) "Log created successfully\r\n";
 	static const int8_t *pcWrongValue = ( int8_t * ) "Log creation failed. Wrong parameters\r\n";
 	static const int8_t *pcLogExists = ( int8_t * ) "Log creation failed. Log name already exists\r\n";
 	static const int8_t *pcSDerror = ( int8_t * ) "Log creation failed. SD card error\r\n";
 	static const int8_t *pcMaxLogs = ( int8_t * ) "Log creation failed. Maximum number of logs reached\r\n";
+	static const int8_t *pcMemoryFull = ( int8_t * ) "Variable was not added to log. Internal memory full\r\n";
 	
 	/* Remove compile time warnings about unused parameters, and check the
 	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
@@ -794,6 +796,11 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	
 	/* log name */
 	pcParameterString1[xParameterStringLength1] = 0;		// Get rid of the remaining parameters
+	name = (char *)malloc(strlen((const char *)pcParameterString1));		// Move string out of the stack
+	if (name == NULL)	
+		result = H05R0_ERR_MemoryFull;
+	else
+		strcpy(name, (const char *)pcParameterString1);
 	
 	/* type */
 	if (!strncmp((const char *)pcParameterString2, "rate", xParameterStringLength2))
@@ -830,11 +837,15 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 	/* index name */
 	pcParameterString6[xParameterStringLength6] = 0;		// Get rid of the remaining parameters
-
+	index = (char *)malloc(strlen((const char *)pcParameterString6));		// Move string out of the stack
+	if (index == NULL)	
+		result = H05R0_ERR_MemoryFull;
+	else
+		strcpy(index, (const char *)pcParameterString6);
 	
 	/* Create the log */
 	if (result == H05R0_OK) {
-		result = CreateLog((const char *)pcParameterString1, type, rate, dformat, iformat, (const char *)pcParameterString6);	
+		result = CreateLog(name, type, rate, dformat, iformat, index);	
 	}
 	
 	/* Respond to the command */
@@ -848,6 +859,8 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcSDerror);
 	} else if (result ==  H05R0_ERR_MaxLogs) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMaxLogs);
+	} else if (result ==  H05R0_ERR_MemoryFull) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMemoryFull);
 	}
 	
 	/* There is no more data to return after this single string, so return
@@ -867,7 +880,6 @@ portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, c
 	static const int8_t *pcOKMessage1 = ( int8_t * ) "Log deleted both internally and from the disk\r\n";
 	static const int8_t *pcOKMessage2 = ( int8_t * ) "Log deleted internally and kept on the disk\r\n";
 	static const int8_t *pcWrongValue = ( int8_t * ) "Log deletion failed. Wrong parameters\r\n";
-
 	
 	/* Remove compile time warnings about unused parameters, and check the
 	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
@@ -893,7 +905,7 @@ portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, c
 
 	/* Delete the log */
 	if (result == H05R0_OK) {
-		result = DeleteLog((const char *)pcParameterString1, options);	
+		result = DeleteLog((char *)pcParameterString1, options);	
 	}
 	
 	/* Respond to the command */
@@ -919,7 +931,7 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	int8_t *pcParameterString1, *pcParameterString2, *pcParameterString3, *pcParameterString4, *pcParameterString5; 
 	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
 	portBASE_TYPE xParameterStringLength4 = 0, xParameterStringLength5 = 0;
-	logVarType_t type; uint32_t source; 
+	logVarType_t type; uint32_t source; char *label;
 	static const int8_t *pcOKMessage = ( int8_t * ) "Variable added to log successfully\r\n";
 	static const int8_t *pcWrongValue = ( int8_t * ) "Variable was not added to log. Wrong parameters\r\n";
 	static const int8_t *pcLogDoesNotExist = ( int8_t * ) "Variable was not added to log. Log does not exist\r\n";
@@ -990,11 +1002,15 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	
 	/* variable column label */
 	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
-
+	label = (char *)malloc(strlen((const char *)pcParameterString5));		// Move string out of the stack
+	if (label == NULL)	
+		result = H05R0_ERR_MemoryFull;
+	else
+		strcpy(label, (const char *)pcParameterString5);
 	
 	/* Add the variable to the log */
 	if (result == H05R0_OK) {
-		result = LogVar((const char *)pcParameterString1, type, source, (const char *)pcParameterString5);	
+		result = LogVar((char *)pcParameterString1, type, source, label);	
 	}
 	
 	/* Respond to the command */
@@ -1037,7 +1053,7 @@ portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 
 	/* Start the log */
 	if (result == H05R0_OK) {
-		result = StartLog((const char *)pcParameterString1);	
+		result = StartLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
@@ -1074,7 +1090,7 @@ portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const 
 
 	/* Stop the log */
 	if (result == H05R0_OK) {
-		result = StopLog((const char *)pcParameterString1);	
+		result = StopLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
@@ -1114,7 +1130,7 @@ portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 
 	/* Pause the log */
 	if (result == H05R0_OK) {
-		result = PauseLog((const char *)pcParameterString1);	
+		result = PauseLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
@@ -1153,7 +1169,7 @@ portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 	/* Resume the log */
 	if (result == H05R0_OK) {
-		result = ResumeLog((const char *)pcParameterString1);	
+		result = ResumeLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
