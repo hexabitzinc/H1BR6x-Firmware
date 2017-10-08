@@ -977,10 +977,17 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 		result = H05R0_ERR_WrongParams;
 	
 	/* source */
-	source = strtoul(( const char * ) pcParameterString4, NULL, 16); 
-	if ((source < FLASH_BASE || source > (FLASH_BASE+FLASH_SIZE)) && (source < SRAM_BASE || source > (SRAM_BASE+SRAM_SIZE)))
+	if (type == PORT_BUTTON && pcParameterString4[0] == 'b')
+		source = ( uint8_t ) atol( ( char * ) pcParameterString4+1 );
+	else if ((type == PORT_DIGITAL || type == PORT_DATA) && pcParameterString4[0] == 'p')
+		source = ( uint8_t ) atol( ( char * ) pcParameterString4+1 );
+	else if (!strncmp((const char *)pcParameterString4, "0x", 2)) {
+		source = strtoul(( const char * ) pcParameterString4, NULL, 16);
+		if ((source < FLASH_BASE || source > (FLASH_BASE+FLASH_SIZE)) && (source < SRAM_BASE || source > (SRAM_BASE+SRAM_SIZE)))
+			result = H05R0_ERR_WrongParams;
+	} else
 		result = H05R0_ERR_WrongParams;
-
+	
 	/* variable column label */
 	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
 
