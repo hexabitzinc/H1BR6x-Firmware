@@ -89,6 +89,19 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
+	CreateLog("log1", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Time");
+	LogVar("log1", MEMORY_DATA_UINT32, 0x08000100, "100");
+	LogVar("log1", MEMORY_DATA_UINT32, 0x08000104, "104");
+	
+	CreateLog("log2", EVENT, 10, FMT_TAB, FMT_SAMPLE, "Sample");
+	LogVar("log2", MEMORY_DATA_UINT32, 0x08000108, "108");
+	LogVar("log2", MEMORY_DATA_UINT32, 0x0800010C, "10C");
+	
+	StartLog("log1"); StartLog("log2");
+	
+	Delay_s(5);
+	
+	StopLog("log1"); StopLog("log2");
 	
   /* Infinite loop */
   for(;;)

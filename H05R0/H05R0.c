@@ -34,13 +34,14 @@ log_t logs[MAX_LOGS];
 logVar_t logVars[MAX_LOG_VARS];
 FATFS SDFatFs;  /* File system object for SD card logical drive */
 char SDPath[4]; /* SD card logical drive path */
-FIL MyFile;     /* File object */
+FIL MyFile, tempFile;     /* File object */
 uint32_t byteswritten, bytesread;                     /* File write/read counts */
 char buffer[20], lineBuffer[100];
 char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
 char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
 char logHeaderText3[] = "Log type: Events\n\n";
 uint16_t openLog = 0xFFFF, activeLogs;
+uint16_t numActiveLog = 0;
 TaskHandle_t LogTaskHandle = NULL;
 uint8_t temp_uint8 = 0; 
 float *ptemp_float[MAX_LOG_VARS]; 
@@ -48,7 +49,7 @@ float *ptemp_float[MAX_LOG_VARS];
 /* Private function prototypes -----------------------------------------------*/	
 void LogTask(void * argument);
 uint8_t CheckLogVarEvent(uint16_t varIndex);
-Module_Status OpenThisLog(uint16_t logindex);
+Module_Status OpenThisLog(uint16_t logindex, FIL *objFile);
 
 
 /* Create CLI commands --------------------------------------------------------*/
@@ -226,9 +227,9 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t i, j, ii, eventResult; 
-	static uint8_t newline;
-	
+	uint8_t eventResult; 
+	static uint8_t newline = 1;
+	volatile uint8_t i,j,ii;
 	/* Infinite loop */
 	for(;;)
 	{
@@ -238,14 +239,15 @@ void LogTask(void * argument)
 			if ( (activeLogs >> j) & 0x01 )
 			{			
 				/* Open this log file if it's closed (and close open one) */
-				OpenThisLog(j);					
+				OpenThisLog(j, &MyFile);
 				
-				/* Check all registered variables */
+				/* Check all registered variables for this log */
 				for( i=0 ; i<MAX_LOG_VARS ; i++)
 				{
-					if (logVars[i].type)
+					if (logVars[i].type && logVars[i].logIndex == j)
 					{
-						eventResult = CheckLogVarEvent(i);
+						if (logs[j].type == EVENT)
+							eventResult = CheckLogVarEvent(i);
 						
 						/* Check for rate or event */
 						if ( (logs[j].type == RATE && (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate)) || (logs[j].type == EVENT && eventResult) )
@@ -352,22 +354,21 @@ void LogTask(void * argument)
 							++(logs[j].sampleCount);				// Advance one sample
 						}			
 					}					
-				}	
+				}
+				f_close(&MyFile);
 				/* Start a new line entry */
 				newline = 1;			
 				/* Reset the rate timer */	
 				if ( (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) ) 
 					logs[j].t0 = HAL_GetTick();
-				break;
 				
 			}	
 			else	
 				break;				
 		}	
-		
-		taskYIELD();
+	    taskYIELD(); 
 	}								
-
+	
 }
 
 /*-----------------------------------------------------------*/
@@ -453,30 +454,20 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 
 /*-----------------------------------------------------------*/
 
-/* --- Open this log file if it's closed (and close open one). 
+/* --- Open log file if it's closed (and close open one). 
 				logindex: Log array index.
 */
-Module_Status OpenThisLog(uint16_t logindex)
+Module_Status OpenThisLog(uint16_t logindex, FIL *objFile)
 {
 	FRESULT res; char name[15] = {0}; 	
-		
-	if ( openLog != logindex )
-	{					
-		/* Close currently open log and store pointer lcoation */
-		logs[openLog].filePtr = MyFile.fptr;
-		openLog = 0xFFFF; f_close(&MyFile);
-		/* Append log name with extension */
-		strcpy((char *)name, logs[logindex].name); strncat((char *)name, ".TXT", 4);
-		/* Open this log */			
-		res = f_open(&MyFile, name, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
-		if (res != FR_OK)	return H05R0_ERROR;	
-		openLog = logindex;
-		MyFile.fptr = logs[logindex].filePtr;			// Load last pointer value
-	}	
-		
+	/* Append log name with extension */
+	strcpy((char *)name, logs[logindex].name); strncat((char *)name, ".TXT", 4);
+	/* Open this log */			
+	res = f_open(objFile, name, FA_OPEN_APPEND | FA_WRITE | FA_READ);
+	if (res != FR_OK)	
+		return H05R0_ERROR;	
 	return H05R0_OK;
 } 
-
 
 /* -----------------------------------------------------------------------
 	|																APIs	 																 	|
@@ -518,17 +509,17 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
   {
 		if(logs[i].name == 0)
 		{
+
 			/* Append log name with extension */
 			strcpy((char *)name, logName); strncat((char *)name, ".TXT", 4);
 			/* Check if file exists on disk */
-			res = f_open(&MyFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
+			res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
 			if(res == FR_EXIST)
 				return H05R0_ERR_LogNameExists;
 			else if (res != FR_OK)
 				return H05R0_ERR_SD;	
 			
 			/* Log created successfuly */
-			openLog = i;
 			logs[i].name = logName;
 			logs[i].type = type;
 			logs[i].rate = rate;
@@ -537,21 +528,22 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			logs[i].indexColumnLabel = indexColumnLabel;
 			
 			/* Write log header */
-			strncpy(name, modulePNstring[4], 5); name[5] = 0;				// Copy only module PN
-			sprintf( ( char * ) buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, name);
-			res = f_write(&MyFile, buffer, strlen(logHeaderText1), (void *)&byteswritten);
-			memset(buffer, 0, byteswritten);
+			sprintf( ( char * ) lineBuffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, modulePNstring[myPN]);
+			res = f_write(&tempFile, lineBuffer, strlen(logHeaderText1), (void *)&byteswritten);
+			memset(lineBuffer, 0, byteswritten);
 			if(type == RATE) {
 				sprintf( ( char * ) buffer, logHeaderText2, rate);
-				res = f_write(&MyFile, buffer, strlen(logHeaderText2), (void *)&byteswritten);				
+				res = f_write(&tempFile, buffer, strlen(logHeaderText2), (void *)&byteswritten);				
 			} else if (type == EVENT) {
-				res = f_write(&MyFile, logHeaderText3, strlen(logHeaderText3), (void *)&byteswritten);	
+				res = f_write(&tempFile, logHeaderText3, strlen(logHeaderText3), (void *)&byteswritten);	
 			}
 			memset(buffer, 0, byteswritten);
 			
 			/* Write index label */
-			res = f_write(&MyFile, indexColumnLabel, strlen(indexColumnLabel), (void *)&byteswritten);
-							
+			res = f_write(&tempFile, indexColumnLabel, strlen(indexColumnLabel), (void *)&byteswritten);
+			
+			f_close(&tempFile);
+			
 			return H05R0_OK;
 		}
   }	
@@ -608,15 +600,17 @@ Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* Co
 						return H05R0_ERR_MemoryFull;
 					
 					/* Write delimiter */
-					OpenThisLog(j);
+					OpenThisLog(j, &tempFile);
 					if (logs[j].delimiterFormat == FMT_SPACE)
-						f_write(&MyFile, " ", 1, (void *)&byteswritten);
+						f_write(&tempFile, " ", 1, (void *)&byteswritten);
 					else if (logs[j].delimiterFormat == FMT_TAB)
-						f_write(&MyFile, "\t", 1, (void *)&byteswritten);
+						f_write(&tempFile, "\t", 1, (void *)&byteswritten);
 					else if (logs[j].delimiterFormat == FMT_COMMA)
-						f_write(&MyFile, ",", 1, (void *)&byteswritten);
+						f_write(&tempFile, ",", 1, (void *)&byteswritten);
 					/* Write variable label */
-					f_write(&MyFile, ColumnLabel, strlen(ColumnLabel), (void *)&byteswritten);
+					f_write(&tempFile, ColumnLabel, strlen(ColumnLabel), (void *)&byteswritten);
+					
+					f_close(&tempFile);
 					
 					return H05R0_OK;
 				}
@@ -643,11 +637,15 @@ Module_Status StartLog(char* logName)
 		if (!strcmp(logs[j].name, logName))
 		{
 			activeLogs |= (0x01 << j);
+			numActiveLog += 1;
 			logs[j].sampleCount = 0;
 			logs[j].t0 = HAL_GetTick();
-			OpenThisLog(j);
+			OpenThisLog(j, &tempFile);
 			/* Write new line */
-			f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);
+			f_write(&tempFile, "\n\r", 2, (void *)&byteswritten);
+			
+			f_close(&tempFile);
+			
 			return H05R0_OK;
 		}		
 	}
@@ -662,7 +660,7 @@ Module_Status StartLog(char* logName)
 */
 Module_Status StopLog(char* logName)
 {
-	uint8_t j = 0;
+	volatile uint8_t j = 0;
 
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
@@ -672,11 +670,10 @@ Module_Status StopLog(char* logName)
 			if ( (activeLogs >> j) & 0x01 )
 			{
 				activeLogs &= ~(0x01 << j);
+				numActiveLog -= 1;
 				logs[j].sampleCount = 0;
 				logs[j].t0 = 0;
-				/* Close log file */
-				logs[j].filePtr = MyFile.fptr;
-				openLog = 0xFFFF; f_close(&MyFile);
+
 				return H05R0_OK;
 			}
 			else
@@ -796,7 +793,8 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	
 	/* log name */
 	pcParameterString1[xParameterStringLength1] = 0;		// Get rid of the remaining parameters
-	name = (char *)malloc(strlen((const char *)pcParameterString1));		// Move string out of the stack
+	name = (char *)malloc(strlen((const char *)pcParameterString1) + 1);		// Move string out of the stack
+	memset (name, 0, strlen((const char *)pcParameterString1) + 1);
 	if (name == NULL)	
 		result = H05R0_ERR_MemoryFull;
 	else
@@ -837,7 +835,8 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 	/* index name */
 	pcParameterString6[xParameterStringLength6] = 0;		// Get rid of the remaining parameters
-	index = (char *)malloc(strlen((const char *)pcParameterString6));		// Move string out of the stack
+	index = (char *)malloc(strlen((const char *)pcParameterString6) + 1);		// Move string out of the stack
+	memset (index, 0, strlen((const char *)pcParameterString6) + 1);
 	if (index == NULL)	
 		result = H05R0_ERR_MemoryFull;
 	else
@@ -846,6 +845,9 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	/* Create the log */
 	if (result == H05R0_OK) {
 		result = CreateLog(name, type, rate, dformat, iformat, index);	
+	} else {
+		free(name);
+		free(index);
 	}
 	
 	/* Respond to the command */
@@ -1002,7 +1004,8 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	
 	/* variable column label */
 	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
-	label = (char *)malloc(strlen((const char *)pcParameterString5));		// Move string out of the stack
+	label = (char *)malloc(strlen((const char *)pcParameterString5) + 1);		// Move string out of the stack
+	memset (label, 0, strlen((const char *)xParameterStringLength5) + 1);
 	if (label == NULL)	
 		result = H05R0_ERR_MemoryFull;
 	else
@@ -1011,6 +1014,8 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	/* Add the variable to the log */
 	if (result == H05R0_OK) {
 		result = LogVar((char *)pcParameterString1, type, source, label);	
+	} else {
+		free(label);
 	}
 	
 	/* Respond to the command */
