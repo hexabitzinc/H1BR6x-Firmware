@@ -19,8 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
 
-
-
 /* Define UART variables */
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -28,29 +26,42 @@ UART_HandleTypeDef huart3;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 
-
-/* Private variables ---------------------------------------------------------*/
+/*=================================================================================*/
+/*========================= Private variables  ====================================*/
+/*=================================================================================*/
 log_t logs[MAX_LOGS];
 logVar_t logVars[MAX_LOG_VARS];
-FATFS SDFatFs;  /* File system object for SD card logical drive */
-char SDPath[4]; /* SD card logical drive path */
-FIL MyFile, tempFile;     /* File object */
-uint32_t byteswritten, bytesread;                     /* File write/read counts */
-char buffer[20], lineBuffer[100];
-char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
-char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
-char logHeaderText3[] = "Log type: Events\n\n";
-uint16_t openLog = 0xFFFF, activeLogs;
-uint16_t numActiveLog = 0;
+uint32_t compareValue[MAX_LOG_VARS]; 
+/* File system object for SD card logical drive */
+FATFS SDFatFs; 
+/* SD card logical drive path */
+char SDPath[4]; 
+/* File objects */
+FIL MyFile, tempFile;    
+/* File write/read counts */
+uint32_t byteswritten, bytesread;                     
+char lineBuffer[100];
+uint16_t  activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
 uint8_t temp_uint8 = 0; 
-float *ptemp_float[MAX_LOG_VARS]; 
+/* New feature - sequential log naming*/
+bool enableSequential = false;
 
-/* Private function prototypes -----------------------------------------------*/	
+/*=================================================================================*/
+/*========================= CONSTANT ==============================================*/
+/*=================================================================================*/
+const uint8_t numberMap[3] = {1, 10, 100};
+const char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
+const char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
+const char logHeaderText3[] = "Log type: Events\n\n";
+
+
+/*=================================================================================*/
+/*========================= Private function prototypes ===========================*/
+/*=================================================================================*/	
 void LogTask(void * argument);
 uint8_t CheckLogVarEvent(uint16_t varIndex);
 Module_Status OpenThisLog(uint16_t logindex, FIL *objFile);
-
 
 /* Create CLI commands --------------------------------------------------------*/
 
@@ -142,13 +153,16 @@ const CLI_Command_Definition_t resumeCommandDefinition =
 void Module_Init(void)
 {
 	SD_CardInfo CardInfo;
-	
+	/* Init global variables */
+	memset (logs, 0x00U, ((size_t)MAX_LOGS * sizeof(logs)));
+	memset (logs, 0x00U, ((size_t)MAX_LOG_VARS * sizeof(logVars)));
+	enableSequential = true;
 	/* Array ports */
-  MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
-  MX_USART4_UART_Init();
-  MX_USART5_UART_Init();
+	MX_USART1_UART_Init();
+	MX_USART2_UART_Init();
+	MX_USART3_UART_Init();
+	MX_USART4_UART_Init();
+	MX_USART5_UART_Init();
 	
 	/* This module needs more time to process buttons */
 	needToDelayButtonStateReset = true;
@@ -157,25 +171,37 @@ void Module_Init(void)
 	if (BSP_SD_Init() == MSD_ERROR)
 	{
 		/* No SD card. Insert SD card and reboot */
-		while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };		
+		while(1) 
+		{ 
+			IND_ON(); 
+			Delay_ms_no_rtos(500); 
+			IND_OFF(); 
+			Delay_ms_no_rtos(500); 
+		};		
 	}	
 	
 	/* Get the uSD size and info */
 	BSP_SD_GetCardInfo(&CardInfo);
 	
 	/* Link the micro SD disk I/O driver */
-  if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
-  {
-    /* Mount the default drive */
-    if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
-    {
+	if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+	{
+		/* Mount the default drive */
+		if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
+		{
 			/* Unmount the drive */
 			f_mount(0, SDPath, 0); 
-      /* SD card malfunction. Re-insert the card and reboot */
-			while(1) { IND_ON(); Delay_ms_no_rtos(500); IND_OFF(); Delay_ms_no_rtos(500); };	
-    }
-    else
-    {		
+			/* SD card malfunction. Re-insert the card and reboot */
+			while(1) 
+			{ 
+				IND_ON(); 
+				Delay_ms_no_rtos(500); 
+				IND_OFF(); 
+				Delay_ms_no_rtos(500); 
+			}	
+		}
+		else
+		{		
 			/* Create the logging task */
 			xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);			
 		}
@@ -247,8 +273,10 @@ void LogTask(void * argument)
 					if (logVars[i].type && logVars[i].logIndex == j)
 					{
 						if (logs[j].type == EVENT)
+						{
 							eventResult = CheckLogVarEvent(i);
-						
+						}
+						memset(lineBuffer, 0, sizeof(lineBuffer));
 						/* Check for rate or event */
 						if ( (logs[j].type == RATE && (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate)) || (logs[j].type == EVENT && eventResult) )
 						{			
@@ -269,8 +297,9 @@ void LogTask(void * argument)
 								}
 								else if (logs[j].indexColumnFormat == FMT_SAMPLE)
 								{
-									sprintf( ( char * ) buffer, "%d", logs[j].sampleCount);	strcat(lineBuffer, buffer);
-									memset(buffer, 0, sizeof(buffer));
+									sprintf(lineBuffer, "%s%d", lineBuffer, logs[j].sampleCount);
+									/*sprintf( ( char *) buffer, "%d", logs[j].sampleCount);	strcat(lineBuffer, buffer);
+									memset(buffer, 0, sizeof(buffer));*/
 								}					
 							}
 						
@@ -307,36 +336,71 @@ void LogTask(void * argument)
 										case DBL_CLICKED:	strcat(lineBuffer, "DBL_CLICKED"); break; 
 										case PRESSED:	strcat(lineBuffer, "PRESSED"); break; 
 										case RELEASED:	strcat(lineBuffer, "RELEASED"); break; 
-										case PRESSED_FOR_X1_SEC: sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX1Sec); strcat(lineBuffer, buffer); break;
-										case PRESSED_FOR_X2_SEC: sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX2Sec); strcat(lineBuffer, buffer); break;
-										case PRESSED_FOR_X3_SEC: sprintf( ( char * ) buffer, "PRESSED_FOR_%d_SEC", button[logVars[i].source].pressedX3Sec); strcat(lineBuffer, buffer); break;
-										case RELEASED_FOR_Y1_SEC:	sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY1Sec); strcat(lineBuffer, buffer); break;
-										case RELEASED_FOR_Y2_SEC:	sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY2Sec); strcat(lineBuffer, buffer); break;
-										case RELEASED_FOR_Y3_SEC:	sprintf( ( char * ) buffer, "RELEASED_FOR_%d_SEC", button[logVars[i].source].releasedY3Sec); strcat(lineBuffer, buffer); break;
-										case NONE: if (logs[j].type == RATE) strcat(lineBuffer, "NORMAL"); break;								
-										default: break;
+										case PRESSED_FOR_X1_SEC: 
+											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX1Sec);
+											break;
+										case PRESSED_FOR_X2_SEC: 
+											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX2Sec);
+											break;
+										case PRESSED_FOR_X3_SEC: 
+											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX3Sec); 
+											break;
+										case RELEASED_FOR_Y1_SEC:	
+											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY1Sec); 
+											break;
+										case RELEASED_FOR_Y2_SEC:	
+											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY2Sec); 
+											break;
+										case RELEASED_FOR_Y3_SEC:	
+											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY3Sec); 
+											break;
+										case NONE: 
+											if (logs[j].type == RATE) 
+											{
+												strcat(lineBuffer, "NORMAL");
+											}												
+											break;								
+										default: 
+											break;
 									}		
 									/* Reset button state */
-									if (button[logVars[i].source].state != NONE)	delayButtonStateReset = false;
+									if (NONE != button[logVars[i].source].state)	
+									{
+										delayButtonStateReset = false;
+									}
 									break;
 								
 								case PORT_DATA:
 									
 									break;
 								
-								case MEMORY_DATA_UINT8: sprintf( ( char * ) buffer, "%u", *(__IO uint8_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_UINT8: 
+									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint8_t *)logVars[i].source);
+									break;
 
-								case MEMORY_DATA_INT8: sprintf( ( char * ) buffer, "%i", *(__IO uint8_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_INT8: 
+									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int8_t *)logVars[i].source); 
+									break;
 
-								case MEMORY_DATA_UINT16: sprintf( ( char * ) buffer, "%u", *(__IO uint16_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_UINT16: 
+									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint16_t *)logVars[i].source); 
+									break;
 
-								case MEMORY_DATA_INT16: sprintf( ( char * ) buffer, "%i", *(__IO uint16_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_INT16: 
+									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int16_t *)logVars[i].source); 
+									break;
 
-								case MEMORY_DATA_UINT32: sprintf( ( char * ) buffer, "%u", *(__IO uint32_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_UINT32: 
+									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint32_t *)logVars[i].source); 
+									break;
 
-								case MEMORY_DATA_INT32: sprintf( ( char * ) buffer, "%i", *(__IO uint32_t *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_INT32: 
+									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int32_t *)logVars[i].source); 
+									break;
 
-								case MEMORY_DATA_FLOAT: sprintf( ( char * ) buffer, "%f", *(__IO float *)logVars[i].source); strcat(lineBuffer, buffer); break;
+								case MEMORY_DATA_FLOAT: 
+									sprintf((char *)lineBuffer, "%s%f", (char *)lineBuffer, *(__IO float *)logVars[i].source);
+									break;
 								
 								default:			
 									break;
@@ -345,7 +409,7 @@ void LogTask(void * argument)
 							/* Write the line buffer */
 							f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
 							/* Clear the buffers */
-							memset(buffer, 0, sizeof(buffer)); memset(lineBuffer, 0, byteswritten);					
+							/* memset(buffer, 0, sizeof(buffer)); memset(lineBuffer, 0, byteswritten); */
 						}			
 						/* Advance samples counter even if event has not occured */
 						else if ((HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) && logs[j].type == EVENT && !eventResult && newline) 
@@ -397,53 +461,54 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 			break;
 		
 		case MEMORY_DATA_UINT8:
-			if (*(__IO uint8_t *)logVars[varIndex].source != (uint8_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint8_t *)logVars[varIndex].source;
+			if (*(__IO uint8_t *)logVars[varIndex].source != (uint8_t)compareValue[varIndex]) {
+				*(uint8_t*)&compareValue[varIndex] = *(__IO uint8_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT8:
-			if (*(__IO uint8_t *)logVars[varIndex].source != (int8_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint8_t *)logVars[varIndex].source;
+			if (*(__IO int8_t *)logVars[varIndex].source != (int8_t)compareValue[varIndex]) {
+				*(int8_t*)&compareValue[varIndex] = (int8_t)*(__IO int8_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_UINT16:
-			if (*(__IO uint16_t *)logVars[varIndex].source != (uint16_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint16_t *)logVars[varIndex].source;
+			if ((uint16_t)*(__IO uint16_t *)logVars[varIndex].source != (uint16_t)compareValue[varIndex]) {
+				*(uint16_t*)&compareValue[varIndex] = (uint16_t)*(__IO uint16_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT16:
-			if (*(__IO uint16_t *)logVars[varIndex].source != (int16_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint16_t *)logVars[varIndex].source;
+			if ((int16_t)*(__IO uint16_t *)logVars[varIndex].source != (int16_t)compareValue[varIndex]) {
+				*(int16_t*)&compareValue[varIndex] = (int16_t)*(__IO uint16_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_UINT32:
-			if (*(__IO uint32_t *)logVars[varIndex].source != (uint32_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
+		case MEMORY_DATA_FLOAT:
+			if ((uint32_t)*(__IO uint32_t *)logVars[varIndex].source != (uint32_t)compareValue[varIndex]) {
+				compareValue[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
 		case MEMORY_DATA_INT32:
-			if (*(__IO uint32_t *)logVars[varIndex].source != (int32_t)*ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
+			if ((int32_t)*(__IO uint32_t *)logVars[varIndex].source != (int32_t)compareValue[varIndex]) {
+				compareValue[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
 				return 1;
 			}
 			break;
 			
-		case MEMORY_DATA_FLOAT:
-			if (*(__IO float *)logVars[varIndex].source != *ptemp_float[varIndex]) {
-				*ptemp_float[varIndex] = *(__IO float *)logVars[varIndex].source;
+		/*case MEMORY_DATA_FLOAT:
+			if (*(__IO uint32_t *)logVars[varIndex].source != (uint32_t)compareValue[varIndex]) {
+				compareValue[varIndex] = *(__IO uint32_t *)logVars[varIndex].source;
 				return 1;
 			}
-			break;
+			break;*/
 					
 		default:			
 			break;
@@ -459,9 +524,17 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 */
 Module_Status OpenThisLog(uint16_t logindex, FIL *objFile)
 {
-	FRESULT res; char name[15] = {0}; 	
+	FRESULT res; 
+	char name[15] = {0}; 	
 	/* Append log name with extension */
-	strcpy((char *)name, logs[logindex].name); strncat((char *)name, ".TXT", 4);
+	if ((0U != logs[logindex].file_extension) && (true == enableSequential))
+	{
+		sprintf((char *)name, "%s_%d%s", logs[logindex].name, logs[logindex].file_extension, ".TXT");
+	}
+	else
+	{
+		sprintf((char *)name, "%s%s", logs[logindex].name, ".TXT");
+	}
 	/* Open this log */			
 	res = f_open(objFile, name, FA_OPEN_APPEND | FA_WRITE | FA_READ);
 	if (res != FR_OK)	
@@ -485,17 +558,30 @@ Module_Status OpenThisLog(uint16_t logindex, FIL *objFile)
 Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterFormat_t delimiterFormat, indexColumnFormat_t indexColumnFormat,\
 	char* indexColumnLabel)
 {
-	FRESULT res; char name[15] = {0};
+	FRESULT res; 
+	char name[15] = {0};
 	uint8_t i=0;
-	
+	uint8_t countFile = 0;
+	char *pChar = NULL;
+	uint8_t length = 0;
+	bool extensionFile = false;
+	uint8_t position = 0;
 	/* Check if log already exists */
 	for( i=0 ; i<MAX_LOGS ; i++)
-  {
-		if(!strcmp(logs[i].name, logName))
+	{
+		if((0U != logs[i].current_extension)  && (true == enableSequential))
+		{
+			sprintf(name, "%s_%d", logs[i].name, logs[i].current_extension);
+		}
+		else
+		{
+			sprintf(name, "%s", logs[i].name);
+		}
+		if(!strcmp(name, logName))
 		{
 			return H05R0_ERR_LogNameExists;
 		}
-  }
+	}
 	
 	/* Check parameters are correct */
 	if ( (type != RATE && type != EVENT)	||
@@ -506,21 +592,119 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 					
 	/* Name does not exist. Fill first empty location */
 	for( i=0 ; i<MAX_LOGS ; i++)
-  {
+	{
 		if(logs[i].name == 0)
 		{
-
+			if (true == enableSequential)
+			{
+				pChar = strchr(logName , '_');
+				while (pChar != NULL)
+				{
+					position = (uint8_t)((uint32_t)pChar - (uint32_t)logName + 1UL);
+					pChar = strchr(pChar + 1 , '_');
+				}
+				/* */
+				if(0 != position)
+				{
+					pChar = logName + position;
+			
+					length = strlen(pChar);
+					while ('\0' != (char)*pChar)
+					{
+						if((0x30 <= *pChar) && (*pChar <= 0x39))
+						{
+							countFile += ((uint8_t)(*pChar - 0x30) * numberMap[length - 1]);
+						}
+						else
+						{
+							countFile = 0;
+							break;
+						}
+						pChar++;
+						length--;
+					}
+				}
+				else
+				{
+					countFile = 0;
+					logs[i].current_extension = 0;
+				}
+				
+				if (countFile != 0)
+				{
+					extensionFile = true;
+					logs[i].current_extension = countFile ;
+				}
+				else
+				{
+					position = 0;
+					extensionFile = false;
+				}
+			}
 			/* Append log name with extension */
-			strcpy((char *)name, logName); strncat((char *)name, ".TXT", 4);
+			sprintf((char *)name, "%s%s", logName, ".TXT");
 			/* Check if file exists on disk */
 			res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
-			if(res == FR_EXIST)
-				return H05R0_ERR_LogNameExists;
-			else if (res != FR_OK)
-				return H05R0_ERR_SD;	
+			if ((false == enableSequential) && (res == FR_EXIST))
+			{
+				return H05R0_ERR_LogNameExists;		
+			}
+			else if ((res != FR_OK) && (FR_EXIST != res))
+			{
+				return H05R0_ERR_SD;
+			}
+			else if ((true == enableSequential) && (res == FR_EXIST))
+			{
+				countFile = 0;
+				do
+				{
+					memset((char *)name, 0, sizeof(name));
+					if(false == extensionFile)
+					{
+						sprintf(name, "%s_%d%s", logName, countFile, ".TXT");
+					}
+					else
+					{
+						strncpy(name, logName, (size_t)((uint32_t)position - 1));
+						if(0U == countFile)
+						{
+							strncat ((char *)name, ".TXT", 4);
+						}
+						else
+						{
+							sprintf(name, "%s_%d%s", name, countFile, ".TXT");
+						}
+					}
+					countFile++;
+					res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
+				}while ((FR_EXIST == res) && (MAX_DUPLICATE_FILE > countFile));
+				
+				if((MAX_DUPLICATE_FILE == countFile) && (FR_EXIST == res))
+				{
+					return H05R0_ERR_LogNameExists;
+				}
+				else if (FR_OK != res)
+				{
+					return H05R0_ERR_SD;
+				}
+				countFile--;
+			}
 			
 			/* Log created successfuly */
-			logs[i].name = logName;
+			if ((true == enableSequential) && (0U != position))
+			{
+				logs[i].name = malloc((size_t)position);
+				memset(logs[i].name, 0x00U, (size_t)position);
+				strncpy(logs[i].name, name, (size_t)(position - 1));
+			}
+			else
+			{
+				length = strlen(logName);
+				logs[i].name = malloc(length + 1);
+				memset(logs[i].name, 0x00U, (size_t)(length + 1));
+				strncpy(logs[i].name, logName, (size_t)length);
+			}
+			logs[i].file_extension = countFile;
 			logs[i].type = type;
 			logs[i].rate = rate;
 			logs[i].delimiterFormat = delimiterFormat;
@@ -528,21 +712,25 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			logs[i].indexColumnLabel = indexColumnLabel;
 			
 			/* Write log header */
-			sprintf( ( char * ) lineBuffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, modulePNstring[myPN]);
-			res = f_write(&tempFile, lineBuffer, strlen(logHeaderText1), (void *)&byteswritten);
-			memset(lineBuffer, 0, byteswritten);
-			if(type == RATE) {
-				sprintf( ( char * ) buffer, logHeaderText2, rate);
-				res = f_write(&tempFile, buffer, strlen(logHeaderText2), (void *)&byteswritten);				
-			} else if (type == EVENT) {
+			char *buffer = malloc(100);
+			memset (buffer, 0x00, 100);
+			sprintf(buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, modulePNstring[myPN]);
+			res = f_write(&tempFile, buffer, strlen(buffer), (void *)&byteswritten);
+			if(type == RATE) 
+			{
+				sprintf(buffer, logHeaderText2, rate);
+				res = f_write(&tempFile, buffer, strlen(buffer), (void *)&byteswritten);
+			} 
+			else if (type == EVENT) 
+			{
 				res = f_write(&tempFile, logHeaderText3, strlen(logHeaderText3), (void *)&byteswritten);	
 			}
-			memset(buffer, 0, byteswritten);
 			
 			/* Write index label */
 			res = f_write(&tempFile, indexColumnLabel, strlen(indexColumnLabel), (void *)&byteswritten);
 			
 			f_close(&tempFile);
+			free(buffer);
 			
 			return H05R0_OK;
 		}
@@ -562,11 +750,20 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* ColumnLabel)
 {
 	uint8_t i = 0, j = 0;
-
+	char tempName[15] = {0};
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
-		if (!strcmp(logs[j].name, logName))
+		if((0 != logs[j].current_extension) && (true == enableSequential))
+		{
+			sprintf(tempName, "%s_%d", logs[j].name, logs[j].current_extension);
+		}
+		else
+		{
+			sprintf(tempName, "%s", logs[j].name);
+		}
+		
+		if (!strcmp(tempName, logName))
 		{
 			/* Make sure there's enough space for this log variable */
 			for( i=0 ; i<MAX_LOG_VARS ; i++)
@@ -577,27 +774,6 @@ Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* Co
 					logVars[i].source = source;
 					logVars[i].logIndex = j;
 					logVars[i].varLabel = ColumnLabel;
-					
-					/* Alocate memory for temporary old value variables */
-					if( logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT8)
-						ptemp_float[i] = (float*)malloc(sizeof(uint8_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT8)
-						ptemp_float[i] = (float*)malloc(sizeof(int8_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT16)
-						ptemp_float[i] = (float*)malloc(sizeof(uint16_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT16)
-						ptemp_float[i] = (float*)malloc(sizeof(int16_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_UINT32)
-						ptemp_float[i] = (float*)malloc(sizeof(uint32_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_INT32)
-						ptemp_float[i] = (float*)malloc(sizeof(int32_t));
-					else if (logs[j].type == EVENT && logVars[i].type == MEMORY_DATA_FLOAT)
-						ptemp_float[i] = (float*)malloc(sizeof(float));
-					/* Check memory was alocated */
-					if (logs[j].type == EVENT && (logVars[i].type == MEMORY_DATA_UINT8 || logVars[i].type == MEMORY_DATA_INT8 || \
-						logVars[i].type == MEMORY_DATA_UINT16 || logVars[i].type == MEMORY_DATA_INT16 ||logVars[i].type == MEMORY_DATA_UINT32 || \
-						logVars[i].type == MEMORY_DATA_INT32 || logVars[i].type == MEMORY_DATA_FLOAT) && ptemp_float[i] == NULL)
-						return H05R0_ERR_MemoryFull;
 					
 					/* Write delimiter */
 					OpenThisLog(j, &tempFile);
@@ -630,14 +806,21 @@ Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* Co
 Module_Status StartLog(char* logName)
 {
 	uint8_t j = 0;
-
+	char tempName[15] = {0};
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
-		if (!strcmp(logs[j].name, logName))
+		if((0U != logs[j].current_extension) && (true == enableSequential))
+		{
+			sprintf(tempName, "%s_%d", logs[j].name, logs[j].current_extension);
+		}
+		else
+		{
+			sprintf(tempName, "%s", logs[j].name);
+		}
+		if (!strcmp(tempName, logName))
 		{
 			activeLogs |= (0x01 << j);
-			numActiveLog += 1;
 			logs[j].sampleCount = 0;
 			logs[j].t0 = HAL_GetTick();
 			OpenThisLog(j, &tempFile);
@@ -661,26 +844,33 @@ Module_Status StartLog(char* logName)
 Module_Status StopLog(char* logName)
 {
 	volatile uint8_t j = 0;
-
+	char tempName[15] = {0};
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
-		if (!strcmp(logs[j].name, logName))
+		if((0U != logs[j].current_extension) && (true == enableSequential))
+		{
+			sprintf(tempName, "%s_%d", logs[j].name, logs[j].current_extension);
+		}
+		else
+		{
+			sprintf(tempName, "%s", logs[j].name);
+		}
+		if (!strcmp(tempName, logName))
 		{
 			if ( (activeLogs >> j) & 0x01 )
 			{
 				activeLogs &= ~(0x01 << j);
-				numActiveLog -= 1;
 				logs[j].sampleCount = 0;
 				logs[j].t0 = 0;
-
 				return H05R0_OK;
 			}
 			else
+			{
 				return H05R0_ERR_LogIsNotActive;
+			}
 		}		
 	}
-	
 	return H05R0_ERR_LogDoesNotExist;	
 }
 
@@ -692,11 +882,19 @@ Module_Status StopLog(char* logName)
 Module_Status PauseLog(char* logName)
 {
 	uint8_t j = 0;
-
+	char tempName[15] = {0};
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
-		if (!strcmp(logs[j].name, logName))
+		if((0U != logs[j].current_extension)  && (true == enableSequential))
+		{
+			sprintf(tempName, "%s_%d", logs[j].name, logs[j].current_extension);
+		}
+		else
+		{
+			sprintf(tempName, "%s", logs[j].name);
+		}
+		if (!strcmp(tempName, logName))
 		{
 			if ( (activeLogs >> j) & 0x01 )
 			{
@@ -719,11 +917,19 @@ Module_Status PauseLog(char* logName)
 Module_Status ResumeLog(char* logName)
 {
 	uint8_t j = 0;
-
+	char tempName[15] = {0};
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
-		if (!strcmp(logs[j].name, logName))
+		if((0U != logs[j].current_extension)  && (true == enableSequential))
+		{
+			sprintf(tempName, "%s_%d", logs[j].name, logs[j].current_extension);
+		}
+		else
+		{
+			sprintf(tempName, "%s", logs[j].name);
+		}
+		if (!strcmp(tempName, logName))
 		{
 			activeLogs |= (0x01 << j);
 			return H05R0_OK;
@@ -750,7 +956,6 @@ Module_Status DeleteLog(char* logName, options_t options)
 }
 
 /*-----------------------------------------------------------*/
-
 /* -----------------------------------------------------------------------
 	|															Commands																 	|
    ----------------------------------------------------------------------- 
@@ -846,10 +1051,9 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	if (result == H05R0_OK) {
 		result = CreateLog(name, type, rate, dformat, iformat, index);	
 	} else {
-		free(name);
 		free(index);
 	}
-	
+	free(name);
 	/* Respond to the command */
 	if (result == H05R0_OK) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage);

@@ -132,7 +132,11 @@
 
 #define MAX_LOGS					10
 #define MAX_LOG_VARS			30
+#define MAX_DUPLICATE_FILE		((uint8_t)255U)
+#define MAX_NAME_LENGTH			((uint8_t)15U)
 
+#define LOG_EXIST				(true)
+#define LOG_NOT_EXIST			(false)
 /* H05R0_Status Type Definition */  
 typedef enum 
 {
@@ -161,6 +165,8 @@ typedef enum { DELETE_ALL = 0, KEEP_ON_DISK } options_t;
 typedef struct
 {
 	char* name;
+	uint8_t file_extension;
+	uint8_t current_extension;
 	logType_t type; 
 	float rate; 
 	delimiterFormat_t delimiterFormat; 
