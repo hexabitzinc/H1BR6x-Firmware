@@ -90,18 +90,34 @@ int main(void)
 void FrontEndTask(void * argument)
 {
 	CreateLog("log1", RATE, 10, FMT_SPACE, FMT_SAMPLE, "Time");
-	LogVar("log1", MEMORY_DATA_UINT32, 0x08000100, "100");
-	LogVar("log1", MEMORY_DATA_UINT32, 0x08000104, "104");
+	LogVar("log1", MEMORY_DATA_UINT32, 	0x08000100, "100");
+	LogVar("log1", MEMORY_DATA_UINT32, 	0x08000104, "104");
+	LogVar("log1", MEMORY_DATA_INT32, 	0x08000108, "108");
+	LogVar("log1", MEMORY_DATA_INT32, 	0x0800010C, "10C");
+	LogVar("log1", MEMORY_DATA_UINT16, 	0x08000110, "110");
+	LogVar("log1", MEMORY_DATA_UINT16, 	0x08000112, "112");
 	
-	CreateLog("log2", EVENT, 10, FMT_TAB, FMT_SAMPLE, "Sample");
-	LogVar("log2", MEMORY_DATA_UINT32, 0x08000108, "108");
-	LogVar("log2", MEMORY_DATA_UINT32, 0x0800010C, "10C");
+	CreateLog("log2_5", EVENT, 10, FMT_COMMA, FMT_SAMPLE, "Sample");
+	LogVar("log2_5", MEMORY_DATA_INT16, 	0x20000014, "RAM014");
+	LogVar("log2_5", MEMORY_DATA_INT16, 	0x200003D0, "RAM3D0");
+	LogVar("log2_5", MEMORY_DATA_UINT8, 	0x200003F4, "RAM3F4");
+	LogVar("log2_5", MEMORY_DATA_UINT8, 	0x200003F8, "RAM3F8");
+	LogVar("log2_5", MEMORY_DATA_INT8,   0x2000011A, "RAM11A");
+	LogVar("log2_5", MEMORY_DATA_INT8, 	0x2000011B, "RAM11B");
 	
-	StartLog("log1"); StartLog("log2");
+	CreateLog("log_N1_2", EVENT, 10, FMT_TAB, FMT_SAMPLE, "Sample");
+	LogVar("log_N1_2", MEMORY_DATA_UINT32, 	0x0800011C, "11C");
+	LogVar("log_N1_2", MEMORY_DATA_UINT32, 	0x08000120, "120");
+	LogVar("log_N1_2", MEMORY_DATA_INT32, 	0x08000124, "124");
+	LogVar("log_N1_2", MEMORY_DATA_INT32, 	0x08000128, "128");
+	LogVar("log_N1_2", MEMORY_DATA_UINT16, 	0x0800012A, "12A");
+	LogVar("log_N1_2", MEMORY_DATA_UINT16, 	0x0800012C, "12C");
+	
+	StartLog("log2_5"); StartLog("log_N1_2"); StartLog("log1");
 	
 	Delay_s(5);
 	
-	StopLog("log1"); StopLog("log2");
+	StopLog("log1"); StopLog("log2_5"); StopLog("log_N1_2");
 	
   /* Infinite loop */
   for(;;)

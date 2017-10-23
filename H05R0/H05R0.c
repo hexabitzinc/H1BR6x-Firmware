@@ -661,6 +661,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 					memset((char *)name, 0, sizeof(name));
 					if(false == extensionFile)
 					{
+						countFile++;
 						sprintf(name, "%s_%d%s", logName, countFile, ".TXT");
 					}
 					else
@@ -674,8 +675,8 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 						{
 							sprintf(name, "%s_%d%s", name, countFile, ".TXT");
 						}
+						countFile++;
 					}
-					countFile++;
 					res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
 				}while ((FR_EXIST == res) && (MAX_DUPLICATE_FILE > countFile));
 				
@@ -687,7 +688,11 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 				{
 					return H05R0_ERR_SD;
 				}
-				countFile--;
+				
+				if(true == extensionFile)
+				{
+					countFile--;
+				}
 			}
 			
 			/* Log created successfuly */
@@ -1209,7 +1214,7 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	/* variable column label */
 	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
 	label = (char *)malloc(strlen((const char *)pcParameterString5) + 1);		// Move string out of the stack
-	memset (label, 0, strlen((const char *)xParameterStringLength5) + 1);
+	memset (label, 0, strlen((const char *)pcParameterString5) + 1);
 	if (label == NULL)	
 		result = H05R0_ERR_MemoryFull;
 	else
