@@ -297,7 +297,7 @@ void LogTask(void * argument)
 								}
 								else if (logs[j].indexColumnFormat == FMT_SAMPLE)
 								{
-									sprintf(lineBuffer, "%s%d", lineBuffer, logs[j].sampleCount);
+									sprintf(lineBuffer, "%d", logs[j].sampleCount);
 									/*sprintf( ( char *) buffer, "%d", logs[j].sampleCount);	strcat(lineBuffer, buffer);
 									memset(buffer, 0, sizeof(buffer));*/
 								}					
@@ -865,9 +865,8 @@ Module_Status StopLog(char* logName)
 		{
 			if ( (activeLogs >> j) & 0x01 )
 			{
+				/* StopLog only inactive log, don't reset variable*/
 				activeLogs &= ~(0x01 << j);
-				logs[j].sampleCount = 0;
-				logs[j].t0 = 0;
 				return H05R0_OK;
 			}
 			else
