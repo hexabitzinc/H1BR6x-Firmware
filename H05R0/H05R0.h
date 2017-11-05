@@ -137,6 +137,7 @@
 
 #define LOG_EXIST				(true)
 #define LOG_NOT_EXIST			(false)
+	
 /* H05R0_Status Type Definition */  
 typedef enum 
 {
