@@ -56,7 +56,7 @@ const uint8_t numberMap[3] = {1, 10, 100};
 const char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
 const char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
 const char logHeaderText3[] = "Log type: Events\n\n";
-const char logHeaderTimeDate[] = "%s %02d/%02d/%04d %02d:%02d:%02d\n\r";
+const char logHeaderTimeDate[] = "%s %02d/%02d/%04d %02d:%02d:%02d\n";
 
 /*=================================================================================*/
 /*========================= Private function prototypes ===========================*/

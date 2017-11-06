@@ -150,18 +150,50 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>123</LineNumber>
+          <LineNumber>3654</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134235602</Address>
+          <Address>134228370</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\User\main.c</Filename>
+          <Filename>..\BOS\BOS.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Module_1\../User/main.c\123</Expression>
+          <Expression>\\Module_1\../BOS/BOS.c\3654</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>5182</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134280446</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\BOS\BOS.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Module_1\../BOS/BOS.c\5182</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>4946</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134293316</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\BOS\BOS.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Module_1\../BOS/BOS.c\4946</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -300,12 +332,42 @@
           <WinNumber>1</WinNumber>
           <ItemText>buffer</ItemText>
         </Ww>
+        <Ww>
+          <count>27</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>__TIME__</ItemText>
+        </Ww>
+        <Ww>
+          <count>28</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>__DATE__</ItemText>
+        </Ww>
+        <Ww>
+          <count>29</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>pcUserMessage</ItemText>
+        </Ww>
+        <Ww>
+          <count>30</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>portStatus</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
           <count>0</count>
           <WinNumber>2</WinNumber>
           <ItemText>remoteBuffer</ItemText>
+        </Ww>
+        <Ww>
+          <count>1</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>pcParameterString2</ItemText>
+        </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>2</WinNumber>
+          <ItemText>pcParameterString3+1</ItemText>
         </Ww>
       </WatchWindow2>
       <MemoryWindow1>
