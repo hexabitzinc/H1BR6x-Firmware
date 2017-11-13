@@ -44,8 +44,10 @@ char lineBuffer[100];
 uint16_t  activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
 uint8_t temp_uint8 = 0; 
-/* New feature - sequential log naming*/
+/* Module settings - sequential log naming*/
 bool enableSequential = false;
+bool enableTimeDateHeader = false;
+
 
 /*=================================================================================*/
 /*========================= CONSTANT ==============================================*/
@@ -54,7 +56,7 @@ const uint8_t numberMap[3] = {1, 10, 100};
 const char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
 const char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
 const char logHeaderText3[] = "Log type: Events\n\n";
-
+const char logHeaderTimeDate[] = "%s %02d/%02d/%04d %02d:%02d:%02d\n";
 
 /*=================================================================================*/
 /*========================= Private function prototypes ===========================*/
@@ -153,10 +155,13 @@ const CLI_Command_Definition_t resumeCommandDefinition =
 void Module_Init(void)
 {
 	SD_CardInfo CardInfo;
+	
 	/* Init global variables */
 	memset (logs, 0x00U, ((size_t)MAX_LOGS * sizeof(logs)));
 	memset (logs, 0x00U, ((size_t)MAX_LOG_VARS * sizeof(logVars)));
 	enableSequential = true;
+	enableTimeDateHeader = true;
+	
 	/* Array ports */
 	MX_USART1_UART_Init();
 	MX_USART2_UART_Init();
@@ -293,13 +298,12 @@ void LogTask(void * argument)
 								/* Write index */
 								if (logs[j].indexColumnFormat == FMT_TIME)
 								{
-									;
+									GetTimeDate();
+									sprintf(lineBuffer, "%02d:%02d:%02d-%03d", BOS.time.hours, BOS.time.minutes, BOS.time.seconds, BOS.time.msec);
 								}
 								else if (logs[j].indexColumnFormat == FMT_SAMPLE)
 								{
 									sprintf(lineBuffer, "%d", logs[j].sampleCount);
-									/*sprintf( ( char *) buffer, "%d", logs[j].sampleCount);	strcat(lineBuffer, buffer);
-									memset(buffer, 0, sizeof(buffer));*/
 								}					
 							}
 						
@@ -721,6 +725,12 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			memset (buffer, 0x00, 100);
 			sprintf(buffer, logHeaderText1, _firmMajor, _firmMinor, _firmPatch, modulePNstring[myPN]);
 			res = f_write(&tempFile, buffer, strlen(buffer), (void *)&byteswritten);
+			if (enableTimeDateHeader)
+			{
+				GetTimeDate();
+				sprintf(buffer, logHeaderTimeDate, weekdayString[BOS.date.weekday-1], BOS.date.month, BOS.date.day, BOS.date.year, BOS.time.hours, BOS.time.minutes, BOS.time.seconds);
+				res = f_write(&tempFile, buffer, strlen(buffer), (void *)&byteswritten);
+			}
 			if(type == RATE) 
 			{
 				sprintf(buffer, logHeaderText2, rate);
