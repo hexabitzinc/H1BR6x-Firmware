@@ -258,35 +258,47 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t eventResult; 
+  uint8_t eventResult = 0;
 	static uint8_t newline = 1;
-	volatile uint8_t i,j,ii;
+  volatile uint8_t i,j,u8lIndexColumn;
+  volatile uint8_t u8lFlagToWriteData;
+  volatile uint32_t u32lTick = 0;
+  volatile uint32_t u32lRate = 0;
 	/* Infinite loop */
 	for(;;)
 	{
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
 		{	
+      u32lTick = HAL_GetTick()-logs[j].t0;
+      u32lRate = configTICK_RATE_HZ/logs[j].rate;
 			if ( (activeLogs >> j) & 0x01 )
 			{			
 				/* Open this log file if it's closed (and close open one) */
 				OpenThisLog(j, &MyFile);
+        eventResult = 0;
+        if (logs[j].type == EVENT)
+        {
+          /* check all column to search event in line data of log file */
+          for (u8lIndexColumn=0; u8lIndexColumn <MAX_LOG_VARS; u8lIndexColumn++)
+          {
+            eventResult |= CheckLogVarEvent(u8lIndexColumn);
+          }
+        }
+        u8lFlagToWriteData = 0; /* No writting data into log file */
+        newline = 1;            /* Start a new line entry */
 				
 				/* Check all registered variables for this log */
 				for( i=0 ; i<MAX_LOG_VARS ; i++)
 				{
 					if (logVars[i].type && logVars[i].logIndex == j)
 					{
-						if (logs[j].type == EVENT)
-						{
-							eventResult = CheckLogVarEvent(i);
-						}
 						memset(lineBuffer, 0, sizeof(lineBuffer));
 						/* Check for rate or event */
-						if ( (logs[j].type == RATE && (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate)) || (logs[j].type == EVENT && eventResult) )
+            if ( ((logs[j].type == RATE) && (u32lTick >= u32lRate)) || eventResult )
 						{			
 							/* Execute this section only once per cycle */
-							if (newline)
+              if (1 == newline)
 							{	
 								newline = 0;										// Event index written once per line
 								
@@ -307,18 +319,20 @@ void LogTask(void * argument)
 								}					
 							}
 						
-							/* Write delimiter - Add all delimiters before the variable if the log type is EVENT to clarify variable column 
-									(only one variable is logged per event line) */	
-							for( ii=0 ; ii<=i ; ii++)
-							{	
-								if (logs[j].delimiterFormat == FMT_SPACE)
-									strcat(lineBuffer, " ");
-								else if (logs[j].delimiterFormat == FMT_TAB)
-									strcat(lineBuffer, "\t");
-								else if (logs[j].delimiterFormat == FMT_COMMA)
-									strcat(lineBuffer, ",");	
-									
-								if (logs[j].type != EVENT || logs[j].sampleCount == 1)	break;			// Do not print extra delimiters on 1st sample 
+              /* Write delimiter */
+              switch(logs[j].delimiterFormat)
+              {
+                case FMT_SPACE:
+                  strcat(lineBuffer, " ");
+                  break;
+                case FMT_TAB:
+                  strcat(lineBuffer, "\t");
+                  break;
+                case FMT_COMMA:
+                  strcat(lineBuffer, ",");
+                  break;
+                default:
+                  break;
 							}
 							
 							/* Write variable value */
@@ -409,31 +423,39 @@ void LogTask(void * argument)
 								default:			
 									break;
 							}							
-							
-							/* Write the line buffer */
-							f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
-							/* Clear the buffers */
-							/* memset(buffer, 0, sizeof(buffer)); memset(lineBuffer, 0, byteswritten); */
+              u8lFlagToWriteData = 1; /* Setting flag equal "1" to write data into log file */
 						}			
 						/* Advance samples counter even if event has not occured */
-						else if ((HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) && logs[j].type == EVENT && !eventResult && newline) 
+            else if ((u32lTick >= u32lRate) && (!eventResult) && newline)
 						{
 							newline = 0;										// Execute this only once per line
 							++(logs[j].sampleCount);				// Advance one sample
 						}			
+            else
+            {
+              /* Nothing to do */
+            }
+
+            /* Write the lineBuffer into log file */
+            if (1 == u8lFlagToWriteData)
+            {
+              f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
+            }
 					}					
 				}
 				f_close(&MyFile);
 				/* Start a new line entry */
-				newline = 1;			
 				/* Reset the rate timer */	
-				if ( (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) ) 
+        if (u32lTick >= u32lRate)
+        {
 					logs[j].t0 = HAL_GetTick();
-				
+        }
 			}	
 			else	
-				break;				
+      {
+        continue;
 		}	
+    }
 	    taskYIELD(); 
 	}								
 	
