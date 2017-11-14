@@ -173,7 +173,6 @@ typedef struct
 	delimiterFormat_t delimiterFormat; 
 	indexColumnFormat_t indexColumnFormat;
 	char* indexColumnLabel;
-	uint32_t sampleCount;
 	uint32_t filePtr;
 	uint32_t t0;
 } 
