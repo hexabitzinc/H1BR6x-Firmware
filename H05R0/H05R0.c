@@ -258,183 +258,203 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-	uint8_t eventResult; 
-	static uint8_t newline = 1;
-	volatile uint8_t i,j,ii;
+  uint8_t eventResult = 0;
+	static uint8_t newLine = 1;
+	static uint8_t newFile = 1;
+	static uint8_t resetButtonState = 0;
+	static uint32_t sampleCount = 0;
+  volatile uint8_t i,j;
+  volatile uint32_t u32lTick = 0;
+  volatile uint32_t u32lRate = 0;
 	/* Infinite loop */
 	for(;;)
 	{
+    /* Start a new line entry */
+    newLine = 1;            /* Start a new line entry */
+    eventResult = 0;
+    /* check all column to search event in line data of log file */
+    for (i=0; i <MAX_LOG_VARS; i++)
+    {
+      eventResult |= CheckLogVarEvent(i);
+    }
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
-		{	
+		{
+      u32lTick = HAL_GetTick()-logs[j].t0;
+      u32lRate = configTICK_RATE_HZ/logs[j].rate;
 			if ( (activeLogs >> j) & 0x01 )
 			{			
 				/* Open this log file if it's closed (and close open one) */
 				OpenThisLog(j, &MyFile);
-				
-				/* Check all registered variables for this log */
-				for( i=0 ; i<MAX_LOG_VARS ; i++)
-				{
-					if (logVars[i].type && logVars[i].logIndex == j)
-					{
-						if (logs[j].type == EVENT)
-						{
-							eventResult = CheckLogVarEvent(i);
-						}
-						memset(lineBuffer, 0, sizeof(lineBuffer));
-						/* Check for rate or event */
-						if ( (logs[j].type == RATE && (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate)) || (logs[j].type == EVENT && eventResult) )
-						{			
-							/* Execute this section only once per cycle */
-							if (newline)
-							{	
-								newline = 0;										// Event index written once per line
-								
-								++(logs[j].sampleCount);				// Advance one sample
-								
-								/* Write new line */
-								f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);	
-								
-								/* Write index */
-								if (logs[j].indexColumnFormat == FMT_TIME)
-								{
-									GetTimeDate();
-									sprintf(lineBuffer, "%02d:%02d:%02d-%03d", BOS.time.hours, BOS.time.minutes, BOS.time.seconds, BOS.time.msec);
-								}
-								else if (logs[j].indexColumnFormat == FMT_SAMPLE)
-								{
-									sprintf(lineBuffer, "%d", logs[j].sampleCount);
-								}					
-							}
-						
-							/* Write delimiter - Add all delimiters before the variable if the log type is EVENT to clarify variable column 
-									(only one variable is logged per event line) */	
-							for( ii=0 ; ii<=i ; ii++)
-							{	
-								if (logs[j].delimiterFormat == FMT_SPACE)
-									strcat(lineBuffer, " ");
-								else if (logs[j].delimiterFormat == FMT_TAB)
-									strcat(lineBuffer, "\t");
-								else if (logs[j].delimiterFormat == FMT_COMMA)
-									strcat(lineBuffer, ",");	
-									
-								if (logs[j].type != EVENT || logs[j].sampleCount == 1)	break;			// Do not print extra delimiters on 1st sample 
-							}
-							
-							/* Write variable value */
-							switch (logVars[i].type)
-							{
-								case PORT_DIGITAL:
-									//sprintf( ( char * ) buffer, "%d", HAL_GPIO_ReadPin());
-									//f_write(&MyFile, buffer, 1, (void *)&byteswritten);	
-									break;
-								
-								case PORT_BUTTON:
-									switch (button[logVars[i].source].state)
-									{
-										case OFF:	strcat(lineBuffer, "OFF"); break; 
-										case ON:	strcat(lineBuffer, "ON"); break; 
-										case OPEN:	strcat(lineBuffer, "OPEN"); break; 
-										case CLOSED:	strcat(lineBuffer, "CLOSED"); break; 
-										case CLICKED:	strcat(lineBuffer, "CLICKED"); break; 
-										case DBL_CLICKED:	strcat(lineBuffer, "DBL_CLICKED"); break; 
-										case PRESSED:	strcat(lineBuffer, "PRESSED"); break; 
-										case RELEASED:	strcat(lineBuffer, "RELEASED"); break; 
-										case PRESSED_FOR_X1_SEC: 
-											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX1Sec);
-											break;
-										case PRESSED_FOR_X2_SEC: 
-											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX2Sec);
-											break;
-										case PRESSED_FOR_X3_SEC: 
-											sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX3Sec); 
-											break;
-										case RELEASED_FOR_Y1_SEC:	
-											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY1Sec); 
-											break;
-										case RELEASED_FOR_Y2_SEC:	
-											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY2Sec); 
-											break;
-										case RELEASED_FOR_Y3_SEC:	
-											sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY3Sec); 
-											break;
-										case NONE: 
-											if (logs[j].type == RATE) 
-											{
-												strcat(lineBuffer, "NORMAL");
-											}												
-											break;								
-										default: 
-											break;
-									}		
-									/* Reset button state */
-									if (NONE != button[logVars[i].source].state)	
-									{
-										delayButtonStateReset = false;
-									}
-									break;
-								
-								case PORT_DATA:
-									
-									break;
-								
-								case MEMORY_DATA_UINT8: 
-									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint8_t *)logVars[i].source);
-									break;
+        
+        /* Start new log file */
+        newFile = 1;
+        /* Check all registered variables for this log */
+        for( i=0 ; i<MAX_LOG_VARS ; i++)
+        {
+          if (logVars[i].type && (logVars[i].logIndex == j))
+          {
+            memset(lineBuffer, 0, sizeof(lineBuffer));
+            /* Check for rate or event */
+            if ( ((RATE == logs[j].type) && (u32lTick >= u32lRate)) || (1 == eventResult) )
+            {
+              /* Execute this section only once per cycle */
+              if (1 == newLine)
+              {
+                newLine = 0;										// Event index written once per line
+                
+                ++sampleCount;				// Advance one sample
+              }
+              if (1 == newFile)
+              {
+                newFile = 0;
+                /* Write new line */
+                f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);
+                
+                /* Write index */
+                if (logs[j].indexColumnFormat == FMT_TIME)
+                {
+                  GetTimeDate();
+                  sprintf(lineBuffer, "%02d:%02d:%02d-%03d", BOS.time.hours, BOS.time.minutes, BOS.time.seconds, BOS.time.msec);
+                }
+                else if (logs[j].indexColumnFormat == FMT_SAMPLE)
+                {
+                  sprintf(lineBuffer, "%d", sampleCount);
+                }
+              }
+            
+              /* Write delimiter */
+              switch(logs[j].delimiterFormat)
+              {
+                case FMT_SPACE:
+                  strcat(lineBuffer, " ");
+                  break;
+                case FMT_TAB:
+                  strcat(lineBuffer, "\t");
+                  break;
+                case FMT_COMMA:
+                  strcat(lineBuffer, ",");
+                  break;
+                default:
+                  break;
+              }
+              
+              /* Write variable value */
+              switch (logVars[i].type)
+              {
+                case PORT_DIGITAL:
+                  //sprintf( ( char * ) buffer, "%d", HAL_GPIO_ReadPin());
+                  //f_write(&MyFile, buffer, 1, (void *)&byteswritten);	
+                  break;
+                
+                case PORT_BUTTON:
+                  switch (button[logVars[i].source].state)
+                  {
+                    case OFF:	strcat(lineBuffer, "OFF"); break; 
+                    case ON:	strcat(lineBuffer, "ON"); break; 
+                    case OPEN:	strcat(lineBuffer, "OPEN"); break; 
+                    case CLOSED:	strcat(lineBuffer, "CLOSED"); break; 
+                    case CLICKED:	strcat(lineBuffer, "CLICKED"); break; 
+                    case DBL_CLICKED:	strcat(lineBuffer, "DBL_CLICKED"); break; 
+                    case PRESSED:	strcat(lineBuffer, "PRESSED"); break; 
+                    case RELEASED:	strcat(lineBuffer, "RELEASED"); break; 
+                    case PRESSED_FOR_X1_SEC: 
+                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX1Sec);
+                      break;
+                    case PRESSED_FOR_X2_SEC: 
+                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX2Sec);
+                      break;
+                    case PRESSED_FOR_X3_SEC: 
+                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX3Sec); 
+                      break;
+                    case RELEASED_FOR_Y1_SEC:	
+                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY1Sec); 
+                      break;
+                    case RELEASED_FOR_Y2_SEC:	
+                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY2Sec); 
+                      break;
+                    case RELEASED_FOR_Y3_SEC:	
+                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY3Sec); 
+                      break;
+                    case NONE: 
+                      if (logs[j].type == RATE) 
+                      {
+                        strcat(lineBuffer, "NORMAL");
+                      }												
+                      break;								
+                    default: 
+                      break;
+                  }
+                  /* Reset button state */
+                  if (NONE != button[logVars[i].source].state)	
+                  {
+                    resetButtonState = 1;
+                  }
+                  break;
+                
+                case PORT_DATA:
+                  
+                  break;
+                
+                case MEMORY_DATA_UINT8: 
+                  sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint8_t *)logVars[i].source);
+                  break;
 
-								case MEMORY_DATA_INT8: 
-									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int8_t *)logVars[i].source); 
-									break;
+                case MEMORY_DATA_INT8: 
+                  sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int8_t *)logVars[i].source); 
+                  break;
 
-								case MEMORY_DATA_UINT16: 
-									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint16_t *)logVars[i].source); 
-									break;
+                case MEMORY_DATA_UINT16: 
+                  sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint16_t *)logVars[i].source); 
+                  break;
 
-								case MEMORY_DATA_INT16: 
-									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int16_t *)logVars[i].source); 
-									break;
+                case MEMORY_DATA_INT16: 
+                  sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int16_t *)logVars[i].source); 
+                  break;
 
-								case MEMORY_DATA_UINT32: 
-									sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint32_t *)logVars[i].source); 
-									break;
+                case MEMORY_DATA_UINT32: 
+                  sprintf((char *)lineBuffer, "%s%u", (char *)lineBuffer, *(__IO uint32_t *)logVars[i].source); 
+                  break;
 
-								case MEMORY_DATA_INT32: 
-									sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int32_t *)logVars[i].source); 
-									break;
+                case MEMORY_DATA_INT32: 
+                  sprintf((char *)lineBuffer, "%s%d", (char *)lineBuffer, *(__IO int32_t *)logVars[i].source); 
+                  break;
 
-								case MEMORY_DATA_FLOAT: 
-									sprintf((char *)lineBuffer, "%s%f", (char *)lineBuffer, *(__IO float *)logVars[i].source);
-									break;
-								
-								default:			
-									break;
-							}							
-							
-							/* Write the line buffer */
-							f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
-							/* Clear the buffers */
-							/* memset(buffer, 0, sizeof(buffer)); memset(lineBuffer, 0, byteswritten); */
-						}			
-						/* Advance samples counter even if event has not occured */
-						else if ((HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) && logs[j].type == EVENT && !eventResult && newline) 
-						{
-							newline = 0;										// Execute this only once per line
-							++(logs[j].sampleCount);				// Advance one sample
-						}			
-					}					
-				}
+                case MEMORY_DATA_FLOAT: 
+                  sprintf((char *)lineBuffer, "%s%f", (char *)lineBuffer, *(__IO float *)logVars[i].source);
+                  break;
+                
+                default:			
+                  break;
+              }
+            }
+
+            /* Write the lineBuffer into log file */
+            if (0 == newLine)
+            {
+              f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
+            }
+          }			
+        }
 				f_close(&MyFile);
-				/* Start a new line entry */
-				newline = 1;			
 				/* Reset the rate timer */	
-				if ( (HAL_GetTick()-logs[j].t0) >= (configTICK_RATE_HZ/logs[j].rate) ) 
+        if (u32lTick >= u32lRate)
+        {
 					logs[j].t0 = HAL_GetTick();
-				
+        }
 			}	
 			else	
-				break;				
-		}	
-	    taskYIELD(); 
+      {
+        continue;
+      }
+    }
+    /* Reset button state */
+    if (1 == resetButtonState)	
+    {
+      delayButtonStateReset = false;
+      resetButtonState = 0;
+    }
+	  taskYIELD(); 
 	}								
 	
 }
@@ -452,10 +472,10 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 			break;
 		
 		case PORT_BUTTON:
-			if (button[logVars[varIndex].source].state != temp_uint8 && button[logVars[varIndex].source].state != 0) {
+			if ((button[logVars[varIndex].source].state != temp_uint8) && (button[logVars[varIndex].source].state != 0)) {
 				temp_uint8 = button[logVars[varIndex].source].state;
 				return 1;
-			} else if (button[logVars[varIndex].source].state != temp_uint8 && button[logVars[varIndex].source].state == 0) {
+			} else if ((button[logVars[varIndex].source].state != temp_uint8) && (button[logVars[varIndex].source].state == 0)) {
 				temp_uint8 = button[logVars[varIndex].source].state;
 				return 0;
 			}
@@ -836,7 +856,6 @@ Module_Status StartLog(char* logName)
 		if (!strcmp(tempName, logName))
 		{
 			activeLogs |= (0x01 << j);
-			logs[j].sampleCount = 0;
 			logs[j].t0 = HAL_GetTick();
 			OpenThisLog(j, &tempFile);
 			/* Write new line */
