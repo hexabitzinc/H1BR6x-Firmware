@@ -213,6 +213,7 @@ void Module_Init(void)
 	}
 	
 }
+
 /*-----------------------------------------------------------*/
 
 /* --- H05R0 message processing task. 
@@ -230,6 +231,21 @@ Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uin
 	}			
 
 	return result;	
+}
+
+/*-----------------------------------------------------------*/
+
+/* --- Register this module CLI Commands 
+*/
+void RegisterModuleCLICommands(void)
+{
+	FreeRTOS_CLIRegisterCommand( &addLogCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &deleteLogCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &logVarCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &startCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &stopCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &pauseCommandDefinition );
+	FreeRTOS_CLIRegisterCommand( &resumeCommandDefinition );
 }
 
 /*-----------------------------------------------------------*/
