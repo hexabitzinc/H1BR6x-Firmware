@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * File Name          : H05R0_SPI.h
+  * File Name          : H1BR6_SPI.h
   * Description        : This file provides code for the configuration
   *                      of the SPI instances.
   ******************************************************************************
@@ -39,8 +39,8 @@
 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __H05R0_spi_H
-#define __H05R0_spi_H
+#ifndef __H1BR6_spi_H
+#define __H1BR6_spi_H
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -73,7 +73,7 @@ extern void SPIx_WriteReadData(const uint8_t *DataIn, uint8_t *DataOut, uint16_t
 #ifdef __cplusplus
 }
 #endif
-#endif /*__H05R0_spi_H */
+#endif /*__H1BR6_spi_H */
 
 /**
   * @}
