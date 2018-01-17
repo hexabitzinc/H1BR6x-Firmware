@@ -1,6 +1,6 @@
 /**
 ******************************************************************************
-* @file    H05R0_sd_spi.c
+* @file    H1BR6_sd_spi.c
 * @author  MCD Application Team
 * @brief   This file provides a set of functions needed to manage the SPI SD 
 *          Card memory mounted on STM32072B-EVAL board.

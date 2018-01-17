@@ -2,8 +2,8 @@
     BitzOS (BOS) V0.1.4 - Copyright (C) 2017 Hexabitz
     All rights reserved
 
-    File Name     : H05R0.c
-    Description   : Source code for module H05R0.
+    File Name     : H1BR6.c
+    Description   : Source code for module H1BR6.
 										SPI-based uSD driver with Fatfs.  
 		
 		Required MCU resources : 
@@ -150,7 +150,7 @@ const CLI_Command_Definition_t resumeCommandDefinition =
    ----------------------------------------------------------------------- 
 */
 
-/* --- H05R0 module initialization. 
+/* --- H1BR6 module initialization. 
 */
 void Module_Init(void)
 {
@@ -216,17 +216,17 @@ void Module_Init(void)
 
 /*-----------------------------------------------------------*/
 
-/* --- H05R0 message processing task. 
+/* --- H1BR6 message processing task. 
 */
 Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst)
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	switch (code)
 	{
 
 		default:
-			result = H05R0_ERR_UnknownMessage;
+			result = H1BR6_ERR_UnknownMessage;
 			break;
 	}			
 
@@ -578,8 +578,8 @@ Module_Status OpenThisLog(uint16_t logindex, FIL *objFile)
 	/* Open this log */			
 	res = f_open(objFile, name, FA_OPEN_APPEND | FA_WRITE | FA_READ);
 	if (res != FR_OK)	
-		return H05R0_ERROR;	
-	return H05R0_OK;
+		return H1BR6_ERROR;	
+	return H1BR6_OK;
 } 
 
 /* -----------------------------------------------------------------------
@@ -619,7 +619,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 		}
 		if(!strcmp(name, logName))
 		{
-			return H05R0_ERR_LogNameExists;
+			return H1BR6_ERR_LogNameExists;
 		}
 	}
 	
@@ -628,7 +628,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			 (delimiterFormat != FMT_SPACE && delimiterFormat != FMT_TAB && delimiterFormat != FMT_COMMA)	||
 			 (indexColumnFormat != FMT_NONE && indexColumnFormat != FMT_SAMPLE && indexColumnFormat != FMT_TIME)	||
 			 (rate > 1000) )
-		return H05R0_ERR_WrongParams;				
+		return H1BR6_ERR_WrongParams;				
 					
 	/* Name does not exist. Fill first empty location */
 	for( i=0 ; i<MAX_LOGS ; i++)
@@ -687,11 +687,11 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
 			if ((false == enableSequential) && (res == FR_EXIST))
 			{
-				return H05R0_ERR_LogNameExists;		
+				return H1BR6_ERR_LogNameExists;		
 			}
 			else if ((res != FR_OK) && (FR_EXIST != res))
 			{
-				return H05R0_ERR_SD;
+				return H1BR6_ERR_SD;
 			}
 			else if ((true == enableSequential) && (res == FR_EXIST))
 			{
@@ -722,11 +722,11 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 				
 				if((MAX_DUPLICATE_FILE == countFile) && (FR_EXIST == res))
 				{
-					return H05R0_ERR_LogNameExists;
+					return H1BR6_ERR_LogNameExists;
 				}
 				else if (FR_OK != res)
 				{
-					return H05R0_ERR_SD;
+					return H1BR6_ERR_SD;
 				}
 				
 				if(true == extensionFile)
@@ -783,11 +783,11 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			f_close(&tempFile);
 			free(buffer);
 			
-			return H05R0_OK;
+			return H1BR6_OK;
 		}
   }	
 
-	return H05R0_ERR_MaxLogs;	
+	return H1BR6_ERR_MaxLogs;	
 }
 
 /*-----------------------------------------------------------*/
@@ -839,14 +839,14 @@ Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* Co
 					
 					f_close(&tempFile);
 					
-					return H05R0_OK;
+					return H1BR6_OK;
 				}
 			}
-			return H05R0_ERR_MaxLogVars;
+			return H1BR6_ERR_MaxLogVars;
 		}
 	}		
 
-	return H05R0_ERR_LogDoesNotExist;	
+	return H1BR6_ERR_LogDoesNotExist;	
 }
 
 /*-----------------------------------------------------------*/
@@ -879,11 +879,11 @@ Module_Status StartLog(char* logName)
 			
 			f_close(&tempFile);
 			
-			return H05R0_OK;
+			return H1BR6_OK;
 		}		
 	}
 
-	return H05R0_ERR_LogDoesNotExist;	
+	return H1BR6_ERR_LogDoesNotExist;	
 }
 
 /*-----------------------------------------------------------*/
@@ -912,15 +912,15 @@ Module_Status StopLog(char* logName)
 			{
 				/* StopLog only inactive log, don't reset variable*/
 				activeLogs &= ~(0x01 << j);
-				return H05R0_OK;
+				return H1BR6_OK;
 			}
 			else
 			{
-				return H05R0_ERR_LogIsNotActive;
+				return H1BR6_ERR_LogIsNotActive;
 			}
 		}		
 	}
-	return H05R0_ERR_LogDoesNotExist;	
+	return H1BR6_ERR_LogDoesNotExist;	
 }
 
 /*-----------------------------------------------------------*/
@@ -948,14 +948,14 @@ Module_Status PauseLog(char* logName)
 			if ( (activeLogs >> j) & 0x01 )
 			{
 				activeLogs &= ~(0x01 << j);
-				return H05R0_OK;
+				return H1BR6_OK;
 			}
 			else
-				return H05R0_ERR_LogIsNotActive;
+				return H1BR6_ERR_LogIsNotActive;
 		}		
 	}
 
-	return H05R0_ERR_LogDoesNotExist;	
+	return H1BR6_ERR_LogDoesNotExist;	
 } 
 
 /*-----------------------------------------------------------*/
@@ -981,11 +981,11 @@ Module_Status ResumeLog(char* logName)
 		if (!strcmp(tempName, logName))
 		{
 			activeLogs |= (0x01 << j);
-			return H05R0_OK;
+			return H1BR6_OK;
 		}		
 	}
 
-	return H05R0_ERR_LogDoesNotExist;	
+	return H1BR6_ERR_LogDoesNotExist;	
 } 
 
 /*-----------------------------------------------------------*/
@@ -996,7 +996,7 @@ Module_Status ResumeLog(char* logName)
 */
 Module_Status DeleteLog(char* logName, options_t options)
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 
 	
 	// Free ptemp vars
@@ -1012,7 +1012,7 @@ Module_Status DeleteLog(char* logName, options_t options)
 
 portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1, *pcParameterString2, *pcParameterString3, *pcParameterString4, *pcParameterString5, *pcParameterString6; 
 	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
@@ -1050,7 +1050,7 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	name = (char *)malloc(strlen((const char *)pcParameterString1) + 1);		// Move string out of the stack
 	memset (name, 0, strlen((const char *)pcParameterString1) + 1);
 	if (name == NULL)	
-		result = H05R0_ERR_MemoryFull;
+		result = H1BR6_ERR_MemoryFull;
 	else
 		strcpy(name, (const char *)pcParameterString1);
 	
@@ -1060,12 +1060,12 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	else if (!strncmp((const char *)pcParameterString2, "event", xParameterStringLength2))
 		type = EVENT;		
 	else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 	
 	/* rate */
 	rate = atof( ( const char * ) pcParameterString3 );
 	if (rate < 0.0f || rate > 1000.0f)
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 	
 	/* delimiter format */
 	if (!strncmp((const char *)pcParameterString4, "space", xParameterStringLength4))
@@ -1075,7 +1075,7 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	else if (!strncmp((const char *)pcParameterString4, "comma", xParameterStringLength4))
 		dformat = FMT_COMMA;		
 	else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 	
 	/* index format */
 	if (!strncmp((const char *)pcParameterString5, "sample", xParameterStringLength5))
@@ -1085,36 +1085,36 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	else if (!strncmp((const char *)pcParameterString5, "none", xParameterStringLength5))
 		iformat = FMT_NONE;		
 	else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 
 	/* index name */
 	pcParameterString6[xParameterStringLength6] = 0;		// Get rid of the remaining parameters
 	index = (char *)malloc(strlen((const char *)pcParameterString6) + 1);		// Move string out of the stack
 	memset (index, 0, strlen((const char *)pcParameterString6) + 1);
 	if (index == NULL)	
-		result = H05R0_ERR_MemoryFull;
+		result = H1BR6_ERR_MemoryFull;
 	else
 		strcpy(index, (const char *)pcParameterString6);
 	
 	/* Create the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = CreateLog(name, type, rate, dformat, iformat, index);	
 	} else {
 		free(index);
 	}
 	free(name);
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage);
-	} else if (result == H05R0_ERR_WrongParams) {
+	} else if (result == H1BR6_ERR_WrongParams) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
-	} else if (result ==  H05R0_ERR_LogNameExists) {
+	} else if (result ==  H1BR6_ERR_LogNameExists) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogExists);
-	} else if (result ==  H05R0_ERR_SD) {
+	} else if (result ==  H1BR6_ERR_SD) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcSDerror);
-	} else if (result ==  H05R0_ERR_MaxLogs) {
+	} else if (result ==  H1BR6_ERR_MaxLogs) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMaxLogs);
-	} else if (result ==  H05R0_ERR_MemoryFull) {
+	} else if (result ==  H1BR6_ERR_MemoryFull) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMemoryFull);
 	}
 	
@@ -1127,7 +1127,7 @@ portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1, *pcParameterString2; 
 	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0; 
@@ -1156,19 +1156,19 @@ portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, c
 	else if (!strncmp((const char *)pcParameterString2, "keepdisk", xParameterStringLength2))
 		options = KEEP_ON_DISK;		
 	else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 
 	/* Delete the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = DeleteLog((char *)pcParameterString1, options);	
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK && options == DELETE_ALL) {
+	if (result == H1BR6_OK && options == DELETE_ALL) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage1);
-	} else if (result == H05R0_OK && options == KEEP_ON_DISK) {
+	} else if (result == H1BR6_OK && options == KEEP_ON_DISK) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage2);
-	} else if (result == H05R0_ERR_WrongParams) {
+	} else if (result == H1BR6_ERR_WrongParams) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
 	} 
 	
@@ -1181,7 +1181,7 @@ portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, c
 
 portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1, *pcParameterString2, *pcParameterString3, *pcParameterString4, *pcParameterString5; 
 	portBASE_TYPE xParameterStringLength1 = 0, xParameterStringLength2 = 0, xParameterStringLength3 = 0; 
@@ -1222,7 +1222,7 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 		} else if (!strncmp((const char *)pcParameterString3, "button", xParameterStringLength3)) {
 			type = PORT_BUTTON;
 		} else
-			result = H05R0_ERR_WrongParams;
+			result = H1BR6_ERR_WrongParams;
 	} else if (!strncmp((const char *)pcParameterString2, "memory", xParameterStringLength2)) {
 		if (!strncmp((const char *)pcParameterString3, "uint8", xParameterStringLength3)) {
 			type = MEMORY_DATA_UINT8;
@@ -1239,9 +1239,9 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 		} else if (!strncmp((const char *)pcParameterString3, "float", xParameterStringLength3)) {
 			type = MEMORY_DATA_FLOAT;
 		} else
-			result = H05R0_ERR_WrongParams;		
+			result = H1BR6_ERR_WrongParams;		
 	} else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 	
 	/* source */
 	if (type == PORT_BUTTON && pcParameterString4[0] == 'b')
@@ -1251,36 +1251,36 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	else if (!strncmp((const char *)pcParameterString4, "0x", 2)) {
 		source = strtoul(( const char * ) pcParameterString4, NULL, 16);
 		if ((source < FLASH_BASE || source > (FLASH_BASE+FLASH_SIZE)) && (source < SRAM_BASE || source > (SRAM_BASE+SRAM_SIZE)))
-			result = H05R0_ERR_WrongParams;
+			result = H1BR6_ERR_WrongParams;
 	} else
-		result = H05R0_ERR_WrongParams;
+		result = H1BR6_ERR_WrongParams;
 	
 	/* variable column label */
 	pcParameterString5[xParameterStringLength5] = 0;		// Get rid of the remaining parameters
 	label = (char *)malloc(strlen((const char *)pcParameterString5) + 1);		// Move string out of the stack
 	memset (label, 0, strlen((const char *)pcParameterString5) + 1);
 	if (label == NULL)	
-		result = H05R0_ERR_MemoryFull;
+		result = H1BR6_ERR_MemoryFull;
 	else
 		strcpy(label, (const char *)pcParameterString5);
 	
 	/* Add the variable to the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = LogVar((char *)pcParameterString1, type, source, label);	
 	} else {
 		free(label);
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage);
-	} else if (result == H05R0_ERR_WrongParams) {
+	} else if (result == H1BR6_ERR_WrongParams) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcWrongValue);
-	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+	} else if (result ==  H1BR6_ERR_LogDoesNotExist) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
-	} else if (result ==  H05R0_ERR_MemoryFull) {
+	} else if (result ==  H1BR6_ERR_MemoryFull) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMemoryFull);
-	} else if (result ==  H05R0_ERR_MaxLogVars) {
+	} else if (result ==  H1BR6_ERR_MaxLogVars) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcMaxLogVars);
 	}
 	
@@ -1293,7 +1293,7 @@ portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1; 
 	portBASE_TYPE xParameterStringLength1 = 0;  
@@ -1310,14 +1310,14 @@ portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
 
 	/* Start the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = StartLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+	} else if (result ==  H1BR6_ERR_LogDoesNotExist) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
 	} 
 	
@@ -1329,7 +1329,7 @@ portBASE_TYPE startCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 /*-----------------------------------------------------------*/
 portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1; 
 	portBASE_TYPE xParameterStringLength1 = 0;  
@@ -1347,16 +1347,16 @@ portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const 
 	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
 
 	/* Stop the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = StopLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogIsNotActive) {
+	} else if (result ==  H1BR6_ERR_LogIsNotActive) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcIsNotActive, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+	} else if (result ==  H1BR6_ERR_LogDoesNotExist) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
 	} 
 	
@@ -1369,7 +1369,7 @@ portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const 
 
 portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1; 
 	portBASE_TYPE xParameterStringLength1 = 0; 
@@ -1387,16 +1387,16 @@ portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
 
 	/* Pause the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = PauseLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogIsNotActive) {
+	} else if (result ==  H1BR6_ERR_LogIsNotActive) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcIsNotActive, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+	} else if (result ==  H1BR6_ERR_LogDoesNotExist) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
 	}  
 	
@@ -1409,7 +1409,7 @@ portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const
 
 portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
-	Module_Status result = H05R0_OK;
+	Module_Status result = H1BR6_OK;
 	
 	int8_t *pcParameterString1; 
 	portBASE_TYPE xParameterStringLength1 = 0; 
@@ -1426,14 +1426,14 @@ portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, cons
 	pcParameterString1 = ( int8_t * ) FreeRTOS_CLIGetParameter (pcCommandString, 1, &xParameterStringLength1);
 
 	/* Resume the log */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		result = ResumeLog((char *)pcParameterString1);	
 	}
 	
 	/* Respond to the command */
-	if (result == H05R0_OK) {
+	if (result == H1BR6_OK) {
 		sprintf( ( char * ) pcWriteBuffer, ( char * ) pcOKMessage, pcParameterString1);
-	} else if (result ==  H05R0_ERR_LogDoesNotExist) {
+	} else if (result ==  H1BR6_ERR_LogDoesNotExist) {
 		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcLogDoesNotExist);
 	} 
 	

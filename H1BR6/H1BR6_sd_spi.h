@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    H05R0_sd_spi.h
+  * @file    H1BR6_sd_spi.h
   * @author  MCD Application Team
   * @brief   This file contains the common defines and functions prototypes for
   *          the stm32072b_eval_sd.c driver.
@@ -40,8 +40,8 @@
 */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __H05R0_SD_SPI_H
-#define __H05R0_SD_SPI_H
+#ifndef __H1BR6_SD_SPI_H
+#define __H1BR6_SD_SPI_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -196,6 +196,6 @@ uint8_t SD_IO_WriteByte(uint8_t Data);
 }
 #endif
 
-#endif /* __H05R0_SD_SPI_H */
+#endif /* __H1BR6_SD_SPI_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
