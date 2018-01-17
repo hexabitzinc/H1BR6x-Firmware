@@ -2,29 +2,29 @@
     BitzOS (BOS) V0.1.4 - Copyright (C) 2017 Hexabitz
     All rights reserved
 		
-    File Name     : H05R0.c
-    Description   : Header file for module H05R0.
+    File Name     : H1BR6.c
+    Description   : Header file for module H1BR6.
 										SPI-based uSD driver with Fatfs. 
 */
 	
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef H05R0_H
-#define H05R0_H
+#ifndef H1BR6_H
+#define H1BR6_H
 
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
-#include "H05R0_uart.h"	
-#include "H05R0_gpio.h"	
-#include "H05R0_dma.h"		
-#include "H05R0_spi.h"	
-#include "H05R0_sd_spi.h"	
+#include "H1BR6_uart.h"	
+#include "H1BR6_gpio.h"	
+#include "H1BR6_dma.h"		
+#include "H1BR6_spi.h"	
+#include "H1BR6_sd_spi.h"	
 #include "ff_gen_drv.h"
 #include "sd_diskio.h"
 	
 	
 /* Exported definitions -------------------------------------------------------*/
 
-#define	modulePN		_H05R0
+#define	modulePN		_H1BR6
 
 /* Port-related definitions */
 #define	NumOfPorts		5
@@ -138,20 +138,20 @@
 #define LOG_EXIST				(true)
 #define LOG_NOT_EXIST			(false)
 	
-/* H05R0_Status Type Definition */  
+/* H1BR6_Status Type Definition */  
 typedef enum 
 {
-  H05R0_OK = 0,
-	H05R0_ERR_UnknownMessage = 1,
-	H05R0_ERR_LogNameExists = 2,
-	H05R0_ERR_WrongParams,
-	H05R0_ERR_SD,
-	H05R0_ERR_MaxLogs,
-	H05R0_ERR_MaxLogVars,
-	H05R0_ERR_LogDoesNotExist,
-	H05R0_ERR_LogIsNotActive,
-	H05R0_ERR_MemoryFull,
-	H05R0_ERROR = 255
+  H1BR6_OK = 0,
+	H1BR6_ERR_UnknownMessage = 1,
+	H1BR6_ERR_LogNameExists = 2,
+	H1BR6_ERR_WrongParams,
+	H1BR6_ERR_SD,
+	H1BR6_ERR_MaxLogs,
+	H1BR6_ERR_MaxLogVars,
+	H1BR6_ERR_LogDoesNotExist,
+	H1BR6_ERR_LogIsNotActive,
+	H1BR6_ERR_MemoryFull,
+	H1BR6_ERROR = 255
 } Module_Status;
 
 /* Log enuemrations */
@@ -248,6 +248,6 @@ extern const CLI_Command_Definition_t pauseCommandDefinition;
 extern const CLI_Command_Definition_t resumeCommandDefinition;
 
 
-#endif /* H05R0_H */
+#endif /* H1BR6_H */
 
 /************************ (C) COPYRIGHT HEXABITZ *****END OF FILE****/

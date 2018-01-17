@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * File Name          : H05R0_SPI.c
+  * File Name          : H1BR6_SPI.c
   * Description        : This file provides code for the configuration
   *                      of the SPI instances.
   ******************************************************************************
