@@ -133,7 +133,7 @@
 #define MAX_LOGS					10
 #define MAX_LOG_VARS			30
 #define MAX_DUPLICATE_FILE		((uint8_t)255U)
-#define MAX_NAME_LENGTH			((uint8_t)15U)
+#define MAX_NAME_LENGTH			((uint8_t)25U)
 
 #define LOG_EXIST				(true)
 #define LOG_NOT_EXIST			(false)
@@ -175,6 +175,7 @@ typedef struct
 	char* indexColumnLabel;
 	uint32_t filePtr;
 	uint32_t t0;
+	uint32_t sampleCount;
 } 
 log_t;
 

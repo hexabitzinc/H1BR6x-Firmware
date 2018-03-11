@@ -41,6 +41,7 @@ FIL MyFile, tempFile;
 /* File write/read counts */
 uint32_t byteswritten, bytesread;                     
 char lineBuffer[100];
+char tempName[MAX_NAME_LENGTH] = {0};
 uint16_t  activeLogs;
 TaskHandle_t LogTaskHandle = NULL;
 uint8_t temp_uint8 = 0; 
@@ -274,69 +275,59 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 */
 void LogTask(void * argument)
 {	
-  uint8_t eventResult = 0;
+  //uint8_t eventResult = 0;
 	static uint8_t newLine = 1;
-	static uint8_t newFile = 1;
 	static uint8_t resetButtonState = 0;
-	static uint32_t sampleCount = 0;
   volatile uint8_t i,j;
   volatile uint32_t u32lTick = 0;
   volatile uint32_t u32lRate = 0;
 	/* Infinite loop */
 	for(;;)
 	{
-    /* Start a new line entry */
-    newLine = 1;            /* Start a new line entry */
-    eventResult = 0;
-    /* check all column to search event in line data of log file */
-    for (i=0; i <MAX_LOG_VARS; i++)
-    {
-      eventResult |= CheckLogVarEvent(i);
-    }
+    //eventResult = 0;
+    /* check for events across all logged variables */
+//    for (i=0; i <MAX_LOG_VARS; i++)
+//    {
+//      eventResult |= CheckLogVarEvent(i);
+//    }
+		
 		/* Check all active logs */
 		for( j=0 ; j<MAX_LOGS ; j++)
 		{
       u32lTick = HAL_GetTick()-logs[j].t0;
       u32lRate = configTICK_RATE_HZ/logs[j].rate;
+			
+			if ( u32lTick >= u32lRate )
+				++logs[j].sampleCount;				// Advance one sample
+			
 			if ( (activeLogs >> j) & 0x01 )
 			{			
 				/* Open this log file if it's closed (and close open one) */
 				OpenThisLog(j, &MyFile);
         
-        /* Start new log file */
-        newFile = 1;
+				memset(lineBuffer, 0, sizeof(lineBuffer));
         /* Check all registered variables for this log */
         for( i=0 ; i<MAX_LOG_VARS ; i++)
         {
           if (logVars[i].type && (logVars[i].logIndex == j))
           {
-            memset(lineBuffer, 0, sizeof(lineBuffer));
             /* Check for rate or event */
-            if ( ((RATE == logs[j].type) && (u32lTick >= u32lRate)) || (1 == eventResult) )
-            {
-              /* Execute this section only once per cycle */
-              if (1 == newLine)
+            if ( ((RATE == logs[j].type) && (u32lTick >= u32lRate)) || CheckLogVarEvent(i) )
+            {					
+              if (newLine)
               {
-                newLine = 0;										// Event index written once per line
-                
-                ++sampleCount;				// Advance one sample
-              }
-              if (1 == newFile)
-              {
-                newFile = 0;
-                /* Write new line */
-                f_write(&MyFile, "\n\r", 2, (void *)&byteswritten);
-                
+                newLine = 0;										// Event index written once per line     
+								
                 /* Write index */
                 if (logs[j].indexColumnFormat == FMT_TIME)
                 {
                   GetTimeDate();
-                  sprintf(lineBuffer, "%02d:%02d:%02d-%03d", BOS.time.hours, BOS.time.minutes, BOS.time.seconds, BOS.time.msec);
+                  sprintf(lineBuffer, "\n%02d:%02d:%02d-%03d", BOS.time.hours, BOS.time.minutes, BOS.time.seconds, BOS.time.msec);
                 }
                 else if (logs[j].indexColumnFormat == FMT_SAMPLE)
                 {
-                  sprintf(lineBuffer, "%d", sampleCount);
-                }
+                  sprintf(lineBuffer, "\n%d", logs[j].sampleCount);
+                }								
               }
             
               /* Write delimiter */
@@ -374,23 +365,29 @@ void LogTask(void * argument)
                     case DBL_CLICKED:	strcat(lineBuffer, "DBL_CLICKED"); break; 
                     case PRESSED:	strcat(lineBuffer, "PRESSED"); break; 
                     case RELEASED:	strcat(lineBuffer, "RELEASED"); break; 
-                    case PRESSED_FOR_X1_SEC: 
-                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX1Sec);
+                    case PRESSED_FOR_X1_SEC:
+											if (button[logVars[i].source].pressedX1Sec)
+												sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX1Sec);
                       break;
                     case PRESSED_FOR_X2_SEC: 
-                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX2Sec);
+											if (button[logVars[i].source].pressedX2Sec)
+												sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX2Sec);
                       break;
                     case PRESSED_FOR_X3_SEC: 
-                      sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX3Sec); 
+											if (button[logVars[i].source].pressedX3Sec)
+												sprintf((char *)lineBuffer, "%sPRESSED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].pressedX3Sec); 
                       break;
                     case RELEASED_FOR_Y1_SEC:	
-                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY1Sec); 
+											if (button[logVars[i].source].releasedY1Sec)
+												sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY1Sec); 
                       break;
                     case RELEASED_FOR_Y2_SEC:	
-                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY2Sec); 
+											if (button[logVars[i].source].releasedY2Sec)
+												sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY2Sec); 
                       break;
                     case RELEASED_FOR_Y3_SEC:	
-                      sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY3Sec); 
+											if (button[logVars[i].source].releasedY3Sec)
+												sprintf((char *)lineBuffer, "%sRELEASED_FOR_%d_SEC", (char *) lineBuffer, button[logVars[i].source].releasedY3Sec); 
                       break;
                     case NONE: 
                       if (logs[j].type == RATE) 
@@ -445,13 +442,15 @@ void LogTask(void * argument)
               }
             }
 
-            /* Write the lineBuffer into log file */
-            if (0 == newLine)
-            {
-              f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
-            }
+
           }			
         }
+				/* Write the lineBuffer into log file */
+				if (0 == newLine)
+				{
+					f_write(&MyFile, lineBuffer, strlen((const char *)lineBuffer), (void *)&byteswritten);
+					newLine = 1;            /* Start a new line entry */
+				}					
 				f_close(&MyFile);
 				/* Reset the rate timer */	
         if (u32lTick >= u32lRate)
@@ -465,7 +464,7 @@ void LogTask(void * argument)
       }
     }
     /* Reset button state */
-    if (1 == resetButtonState)	
+    if (resetButtonState)	
     {
       delayButtonStateReset = false;
       resetButtonState = 0;
@@ -565,18 +564,17 @@ uint8_t CheckLogVarEvent(uint16_t varIndex)
 Module_Status OpenThisLog(uint16_t logindex, FIL *objFile)
 {
 	FRESULT res; 
-	char name[15] = {0}; 	
 	/* Append log name with extension */
 	if ((0U != logs[logindex].file_extension) && (true == enableSequential))
 	{
-		sprintf((char *)name, "%s_%d%s", logs[logindex].name, logs[logindex].file_extension, ".TXT");
+		sprintf((char *)tempName, "%s_%d%s", logs[logindex].name, logs[logindex].file_extension, ".TXT");
 	}
 	else
 	{
-		sprintf((char *)name, "%s%s", logs[logindex].name, ".TXT");
+		sprintf((char *)tempName, "%s%s", logs[logindex].name, ".TXT");
 	}
 	/* Open this log */			
-	res = f_open(objFile, name, FA_OPEN_APPEND | FA_WRITE | FA_READ);
+	res = f_open(objFile, tempName, FA_OPEN_APPEND | FA_WRITE | FA_READ);
 	if (res != FR_OK)	
 		return H1BR6_ERROR;	
 	return H1BR6_OK;
@@ -599,7 +597,6 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 	char* indexColumnLabel)
 {
 	FRESULT res; 
-	char name[15] = {0};
 	uint8_t i=0;
 	uint8_t countFile = 0;
 	char *pChar = NULL;
@@ -611,13 +608,13 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 	{
 		if((0U != logs[i].current_extension)  && (true == enableSequential))
 		{
-			sprintf(name, "%s_%d", logs[i].name, logs[i].current_extension);
+			sprintf(tempName, "%s_%d", logs[i].name, logs[i].current_extension);
 		}
 		else
 		{
-			sprintf(name, "%s", logs[i].name);
+			sprintf(tempName, "%s", logs[i].name);
 		}
-		if(!strcmp(name, logName))
+		if(!strcmp(tempName, logName))
 		{
 			return H1BR6_ERR_LogNameExists;
 		}
@@ -682,9 +679,9 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 				}
 			}
 			/* Append log name with extension */
-			sprintf((char *)name, "%s%s", logName, ".TXT");
+			sprintf((char *)tempName, "%s%s", logName, ".TXT");
 			/* Check if file exists on disk */
-			res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
+			res = f_open(&tempFile, tempName, FA_CREATE_NEW | FA_WRITE | FA_READ);
 			if ((false == enableSequential) && (res == FR_EXIST))
 			{
 				return H1BR6_ERR_LogNameExists;		
@@ -698,26 +695,26 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 				countFile = 0;
 				do
 				{
-					memset((char *)name, 0, sizeof(name));
+					memset((char *)tempName, 0, sizeof(tempName));
 					if(false == extensionFile)
 					{
 						countFile++;
-						sprintf(name, "%s_%d%s", logName, countFile, ".TXT");
+						sprintf(tempName, "%s_%d%s", logName, countFile, ".TXT");
 					}
 					else
 					{
-						strncpy(name, logName, (size_t)((uint32_t)position - 1));
+						strncpy(tempName, logName, (size_t)((uint32_t)position - 1));
 						if(0U == countFile)
 						{
-							strncat ((char *)name, ".TXT", 4);
+							strncat ((char *)tempName, ".TXT", 4);
 						}
 						else
 						{
-							sprintf(name, "%s_%d%s", name, countFile, ".TXT");
+							sprintf(tempName, "%s_%d%s", tempName, countFile, ".TXT");
 						}
 						countFile++;
 					}
-					res = f_open(&tempFile, name, FA_CREATE_NEW | FA_WRITE | FA_READ);
+					res = f_open(&tempFile, tempName, FA_CREATE_NEW | FA_WRITE | FA_READ);
 				}while ((FR_EXIST == res) && (MAX_DUPLICATE_FILE > countFile));
 				
 				if((MAX_DUPLICATE_FILE == countFile) && (FR_EXIST == res))
@@ -740,7 +737,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			{
 				logs[i].name = malloc((size_t)position);
 				memset(logs[i].name, 0x00U, (size_t)position);
-				strncpy(logs[i].name, name, (size_t)(position - 1));
+				strncpy(logs[i].name, tempName, (size_t)(position - 1));
 			}
 			else
 			{
@@ -801,7 +798,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* ColumnLabel)
 {
 	uint8_t i = 0, j = 0;
-	char tempName[15] = {0};
+
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
@@ -857,7 +854,7 @@ Module_Status LogVar(char* logName, logVarType_t type, uint32_t source, char* Co
 Module_Status StartLog(char* logName)
 {
 	uint8_t j = 0;
-	char tempName[15] = {0};
+
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
@@ -873,10 +870,10 @@ Module_Status StartLog(char* logName)
 		{
 			activeLogs |= (0x01 << j);
 			logs[j].t0 = HAL_GetTick();
+			logs[j].sampleCount = 1;
 			OpenThisLog(j, &tempFile);
 			/* Write new line */
-			f_write(&tempFile, "\n\r", 2, (void *)&byteswritten);
-			
+			f_write(&tempFile, "\n\r", 2, (void *)&byteswritten);		
 			f_close(&tempFile);
 			
 			return H1BR6_OK;
@@ -894,7 +891,7 @@ Module_Status StartLog(char* logName)
 Module_Status StopLog(char* logName)
 {
 	volatile uint8_t j = 0;
-	char tempName[15] = {0};
+
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
@@ -931,7 +928,7 @@ Module_Status StopLog(char* logName)
 Module_Status PauseLog(char* logName)
 {
 	uint8_t j = 0;
-	char tempName[15] = {0};
+
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
@@ -966,7 +963,7 @@ Module_Status PauseLog(char* logName)
 Module_Status ResumeLog(char* logName)
 {
 	uint8_t j = 0;
-	char tempName[15] = {0};
+
 	/* Search for this log to make sure it exists */
 	for( j=0 ; j<MAX_LOGS ; j++)
 	{
