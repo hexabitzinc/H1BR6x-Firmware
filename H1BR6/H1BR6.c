@@ -57,7 +57,7 @@ const uint8_t numberMap[3] = {1, 10, 100};
 const char logHeaderText1[] = "Datalog created by BOS V%d.%d.%d on %s\n";
 const char logHeaderText2[] = "Log type: Rate @ %.2f Hz\n\n";
 const char logHeaderText3[] = "Log type: Events\n\n";
-const char logHeaderTimeDate[] = "%s %02d/%02d/%04d %02d:%02d:%02d\n";
+const char logHeaderTimeDate[] = "%s %s\n";
 
 /*=================================================================================*/
 /*========================= Private function prototypes ===========================*/
@@ -761,7 +761,7 @@ Module_Status CreateLog(char* logName, logType_t type, float rate, delimiterForm
 			if (enableTimeDateHeader)
 			{
 				GetTimeDate();
-				sprintf(buffer, logHeaderTimeDate, weekdayString[BOS.date.weekday-1], BOS.date.month, BOS.date.day, BOS.date.year, BOS.time.hours, BOS.time.minutes, BOS.time.seconds);
+				sprintf(buffer, logHeaderTimeDate, GetDateString(), GetTimeString());
 				res = f_write(&tempFile, buffer, strlen(buffer), (void *)&byteswritten);
 			}
 			if(type == RATE) 
