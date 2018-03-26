@@ -1,6 +1,6 @@
-# H1DR60 Module #
+# H1BR60 Module #
 
-**H1DR60 is a nifty little SPI-based, micro-SD card module** based on STM32F0 MCU and running Fatfs file system. It is part of Hexabitz modular prototyping system.
+**H1BR60 is a nifty little SPI-based, micro-SD card module** based on STM32F0 MCU and running Fatfs file system. It is part of Hexabitz modular prototyping system.
 
 - Use as a stand-alone data-logger or easily integrate with other hardware via serial interfaces.
 - Setup and control logging via a Command Line Interface (CLI).
@@ -11,7 +11,7 @@
 - Program advanced C code with our easy-to-use APIs.
 - Connect to external hardware or combine with other Hexabitz modules!
 
-**Note: This module name/part number (PN) was updated from H05R00 to H1DR60.**
+**Note: This module name/part number (PN) was updated from H05R00 to H1BR60.**
 
 ===============================================
 
@@ -94,7 +94,7 @@ A:
 
 ## Hardware FAQ ##
 
-### Q: How do I use H05R00 to add logging capability to my projects?
+### Q: How do I use H1BR60 to add logging capability to my projects?
 A: H05R00 module logs all sorts of signals connected to its array ports. You can stream digital data from external hardware using serial ports (UART), connect digital sensors (3.3V max) directly, connect external switches of any type (mechanical, optical, magnetic) or momentary and toggle buttons.
 
 ### Q: Can I log same signal in different ways?
@@ -103,7 +103,7 @@ A: Yes! You can start two simultaneous logs of different types (rate or event) a
 ### Q: Can I log a complicated condition/combination of signals?
 A: Yes! You can write C code to combine signals in complex ways and write the output to an internal RAM buffer. This buffer / memory location can then be logged either on rate- or event-basis.
 
-### Q: What's the maximum logging rate in H05R00?
+### Q: What's the maximum logging rate in H1BR60?
 A: Maximum logging rate is 1KHz. However, it depends on number of simultaneous logs and number of variables per log. Usually it is several hundred Hz in complicated scenarios.
 
 Check our [website](https://www.hexabitz.com/faq/) for more information or contact us about any questions or feedback!
