@@ -89,45 +89,7 @@ int main(void)
 /* FrontEndTask function */
 void FrontEndTask(void * argument)
 {
-	AddPortButton(MOMENTARY_NO, P1);								// Magnetic
-	SetButtonEvents(P1, 0, 0, 1, 0, 0, 1, 0, 0);
-	AddPortButton(MOMENTARY_NO, P3);								// Limit Switch 1
-	SetButtonEvents(P3, 1, 0, 3, 0, 0, 0, 0, 0);
-	AddPortButton(MOMENTARY_NO, P4);								// Limit Switch 2
-	SetButtonEvents(P4, 1, 0, 3, 0, 0, 0, 0, 0);
 
-
-//		AddPortButton(MOMENTARY_NO, P3);
-//		SetButtonEvents(P3, 1, 0, 0, 0, 0, 0, 0, 0);
-//		CreateLog("TimeLogE", EVENT, 1, FMT_COMMA, FMT_TIME, "Time");
-//		CreateLog("TimeLogR", RATE, 1, FMT_COMMA, FMT_TIME, "Time");
-//		LogVar("TimeLogE", PORT_BUTTON, P3, "LS1");
-//		LogVar("TimeLogR", PORT_BUTTON, P3, "LS1");
-
-	/* Create log and log switches */
-	CreateLog("Event", EVENT, 10, FMT_COMMA, FMT_SAMPLE, "#");
-  LogVar("Event", PORT_BUTTON, P1, "Magnetic");
-	LogVar("Event", PORT_BUTTON, P3, "LS1");
-	LogVar("Event", PORT_BUTTON, P4, "LS2");
-
-	CreateLog("Rate", RATE, 10, FMT_COMMA, FMT_SAMPLE, "#");
-	LogVar("Rate", PORT_BUTTON, P1, "Magnetic");
-	LogVar("Rate", PORT_BUTTON, P3, "LS1");
-	LogVar("Rate", PORT_BUTTON, P4, "LS2");
-
-	IND_ON();
-
-	StartLog("Event"); StartLog("Rate");
-	Delay_s(20);
-	StopLog("Event"); StopLog("Rate");
-
-//	StartLog("TimeLogE"); StartLog("TimeLogR");
-//	Delay_s(300);
-//	StopLog("TimeLogE"); StopLog("TimeLogR");
-
-	IND_OFF();				// Signal the end of the log
-	Delay_ms(300); IND_blink(200);
-	Delay_ms(300); IND_blink(200);
 
   /* Infinite loop */
   for(;;)
