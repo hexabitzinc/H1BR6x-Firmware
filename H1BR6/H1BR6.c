@@ -65,6 +65,7 @@ const char logHeaderTimeDate[] = "%s %s\n";
 void LogTask(void * argument);
 uint8_t CheckLogVarEvent(uint16_t varIndex);
 Module_Status OpenThisLog(uint16_t logindex, FIL *objFile);
+Module_Status MicroSD_Init(void);
 
 /* Create CLI commands --------------------------------------------------------*/
 
@@ -155,8 +156,6 @@ const CLI_Command_Definition_t resumeCommandDefinition =
 */
 void Module_Init(void)
 {
-	SD_CardInfo CardInfo;
-	
 	/* Init global variables */
 	memset (logs, 0x00U, ((size_t)MAX_LOGS * sizeof(logs)));
 	memset (logs, 0x00U, ((size_t)MAX_LOG_VARS * sizeof(logVars)));
@@ -172,47 +171,9 @@ void Module_Init(void)
 	
 	/* This module needs more time to process buttons */
 	needToDelayButtonStateReset = true;
-		
-	/* uSD - GPIO and SPI */
-	if (BSP_SD_Init() == MSD_ERROR)
-	{
-		/* No SD card. Insert SD card and reboot */
-		while(1) 
-		{ 
-			IND_ON(); 
-			Delay_ms_no_rtos(500); 
-			IND_OFF(); 
-			Delay_ms_no_rtos(500); 
-		};		
-	}	
-	
-	/* Get the uSD size and info */
-	BSP_SD_GetCardInfo(&CardInfo);
-	
-	/* Link the micro SD disk I/O driver */
-	if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
-	{
-		/* Mount the default drive */
-		if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
-		{
-			/* Unmount the drive */
-			f_mount(0, SDPath, 0); 
-			/* SD card malfunction. Re-insert the card and reboot */
-			while(1) 
-			{ 
-				IND_ON(); 
-				Delay_ms_no_rtos(500); 
-				IND_OFF(); 
-				Delay_ms_no_rtos(500); 
-			}	
-		}
-		else
-		{		
-			/* Create the logging task */
-			xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);			
-		}
-	}
-	
+
+	/* Create the logging task */
+	xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);				
 }
 
 /*-----------------------------------------------------------*/
@@ -271,6 +232,41 @@ uint8_t GetPort(UART_HandleTypeDef *huart)
 
 /*-----------------------------------------------------------*/
 
+/* --- Initialize the micro SD card hardware, link Fatfs and mount the drive. 
+*/
+Module_Status MicroSD_Init(void)
+{	
+	SD_CardInfo CardInfo;
+
+	/* Initialize the SPI and the SD card */
+	if (BSP_SD_Init() == MSD_ERROR) 
+	{
+		/* Initialization fail. Replace or re-insert the card and reboot */
+		while(1) { RTOS_IND_blink(500); Delay_ms(500); }	
+	}
+	else
+	{
+		/* Get the uSD size and info */
+		BSP_SD_GetCardInfo(&CardInfo);
+		
+		/* Link the micro SD disk I/O driver */
+		if(FATFS_LinkDriver(&SD_Driver, SDPath) == 0)
+		{
+			/* Mount the default drive */
+			if(f_mount(&SDFatFs, SDPath, 1) != FR_OK)
+			{
+				/* Unmount the drive */
+				f_mount(0, SDPath, 0); 
+				/* SD card malfunction. Replace or re-insert the card and reboot */
+				while(1) { RTOS_IND_blink(500); Delay_ms(500); }	
+			}
+		}
+	}
+	
+	return H1BR6_OK;
+}
+/*-----------------------------------------------------------*/
+
 /* --- Logging task. 
 */
 void LogTask(void * argument)
@@ -281,6 +277,10 @@ void LogTask(void * argument)
   volatile uint8_t i,j;
   volatile uint32_t u32lTick = 0;
   volatile uint32_t u32lRate = 0;
+	
+	/* Initialize the micro SD card */
+	MicroSD_Init();
+	
 	/* Infinite loop */
 	for(;;)
 	{
@@ -441,8 +441,6 @@ void LogTask(void * argument)
                   break;
               }
             }
-
-
           }			
         }
 				/* Write the lineBuffer into log file */

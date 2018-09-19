@@ -277,20 +277,15 @@ static uint8_t SD_ReadData(void);
   */
 uint8_t BSP_SD_Init(void)
 { 
+  /* Check SD card detect pin */
+	while(BSP_SD_IsDetected()==SD_NOT_PRESENT) 
+	{ 
+		RTOS_IND_blink(500); Delay_ms(500); 
+	}		
+	
   /* Configure IO functionalities for SD pin */
   SD_IO_Init();
-
-  /* Check SD card detect pin */
-  if(BSP_SD_IsDetected()==SD_NOT_PRESENT) 
-  {
-    SdStatus = SD_NOT_PRESENT;
-    return MSD_ERROR;
-  }
-  else
-  {
-    SdStatus = SD_PRESENT;
-  }
-
+	
   /* SD initialized and set to SPI mode properly */
   return (SD_GoIdleState());
 }
