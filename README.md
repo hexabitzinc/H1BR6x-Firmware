@@ -2,16 +2,11 @@
 
 **H1BR60 is a nifty little SPI-based, micro-SD card module** based on STM32F0 MCU and running Fatfs file system. It is part of Hexabitz modular prototyping system.
 
-- Use as a stand-alone data-logger or easily integrate with other hardware via serial interfaces.
-- Setup and control logging via a Command Line Interface (CLI).
-- Log digital inputs, memory locations, program variables, serial streams and button actions.
-- Start multiple simultaneous logs with different log variables each.
-- Firmware has Fatfs embedded file system and advanced logging functionality (event logs, rate logs, sample-based, time-based, sequential naming, etc.)
-- Supports SDHC micro-SD memory cards (FAT32, up to 32GB size).
-- Program advanced C code with our easy-to-use APIs.
-- Connect to external hardware or combine with other Hexabitz modules!
+Module web page: https://hexabitz.com/product/micro-sd-memory-card-h1br60/
 
-**Note: This module name/part number (PN) was updated from H05R00 to H1BR60.**
+- Check the *References* tab in module page for links to documentation, design files, source code and examples.
+
+- Check the *Quickstart Guide* tab in module page for quick introduction on using this module.
 
 ===============================================
 
@@ -26,22 +21,7 @@ Hexabitz is a new kind of electronic prototyping platforms with game-changing mo
 - Bitz Operating System - [BOS](https://bitbucket.org/hexabitz/bos)
 - [Thirdparty](https://bitbucket.org/hexabitz/thirdparty)
 
-## Useful Links ##
-
-- Buy H1DR60 module on [Tindie Store](https://www.tindie.com/products/11614/)
-- Check Hexabitz main [website](https://www.hexabitz.com/) and available and planned [modules](https://www.hexabitz.com/modules/).
-- Read the intro to Hexabitz modular prototyping platform on [Hackaday.io](https://hackaday.io/project/76446-hexabitz-modular-electronics-for-real)
-- Overview of hexabitz software [architecture](https://hackaday.io/project/76446-hexabitz-modular-electronics-for-real/log/117213-hexabitz-software-architecture)
-- Check and in-depth overview of Hexabitz code in this series of [article]().
-- Hexabitz demo [projects](https://hackaday.io/list/87488-hexabitz-projects)
-
-## Documentation ##
-We developed a new form of documentation we call it the Factsheet: it's a mix between a hardware datasheet listing electrical properties and a software cheat-sheet showing you quickly the most important software functions and commands. Factsheets are color-coded and designed to be printed double-sided. We think they will come in handy for your Hexabitz projects. Let us know if you like them! 
-
-- [Module factsheet](https://d3s5r33r268y59.cloudfront.net/datasheets/11614/2018-03-04-21-48-41/H05R00%20Factsheet.pdf)
-
-## Design Files ##
-- Module schematics [[PDF](https://www.dropbox.com/s/31tct2bwhd8ben2/H05R00%20Schematics.pdf?dl=0)]
+See also other module repositories [here](https://bitbucket.org/hexabitz/)
 
 ===============================================
 
@@ -49,25 +29,27 @@ We developed a new form of documentation we call it the Factsheet: it's a mix be
 
 ### If you want to load a precompiled HEX file ###
 
-1- Navigate to MDK-ARM/Objects and load the *Module 1.hex* HEX file using any firmware update method described [here]().
+1- Navigate to *Compiled* folder and load the appropriate HEX file using any firmware update method described [here](https://hackaday.io/project/76446-hexabitz-modular-electronics-for-real/log/137477-how-to-update-module-firmware).
 
 ### If you want to compile the code: ###
 
-1- If you didn't already, download Keil uVision MDK toolchain from [here](http://www2.keil.com/mdk5/uvision/). Get your free [license](http://www.keil.com/) for STM32F0 MCUs!
+1- If you don't have uVision installed already, download Keil uVision MDK toolchain from [here](http://www2.keil.com/mdk5/uvision/). Get your free [license](http://www.keil.com/) for STM32F0 MCUs!
 
 2- Download or clone this repository source code and open the uVion projext in MDK-ARM folder (it has .uvprojx extension).
 
-3- If you are loading a single module, simple compile the code and load it to module MCU via one of the firmware update methods explaind [here]().
+3- If you are loading a single module, simply compile the code and load it to module MCU via one of the firmware update methods explaind [here](https://hackaday.io/project/76446-hexabitz-modular-electronics-for-real/log/137477-how-to-update-module-firmware).
 
-4- If you are loading multiple modules of the same type (connected in an array), then manually modify the module ID in Options for Target >> C/C++ >> Preprocessor Symbols >> Define >> _module=x (where x the module ID) and in Output >> Name of Executable. Recompile the project and load each module according to its ID. You can also create multiple targets as explained in the firmware update [guide]().
+4- If you are loading multiple modules of the same type (connected in an array) and you want them to have unique firmware, then manually modify the module ID in Options for Target >> C/C++ >> Preprocessor Symbols >> Define >> _module=x (where x is the module ID) and in Output >> Name of Executable. Recompile the project and load each module according to its ID. You can also create multiple targets as explained in the firmware update [guide]().
+
+You can also compile using GCC on your favorite toolchain.
 
 ### How do I test? ###
 
 1- If code is loaded correctly, you should see one or few indicator LED blinks when you power-cycle.
 
-2- Use [RealTerm](https://sourceforge.net/projects/realterm/) or any other terminal emulator with a USB-to-USRT cable to access the module CLI. Learn about using the CLI [here]().
+2- Use [RealTerm](https://sourceforge.net/projects/realterm/) or any other terminal emulator with a USB-to-USRT cable to access the module CLI. Learn about using the CLI [here](https://hackaday.io/project/76446-hexabitz-modular-electronics-for-real/log/137487-using-the-command-line-interface-cli).
 
-3- Check available CLI commands by typing *help* or use the module [factsheet](https://d3s5r33r268y59.cloudfront.net/datasheets/11614/2018-03-04-21-48-41/H05R00%20Factsheet.pdf). Make sure the factsheet BOS version number (at the footer) matches the source code version you have.
+3- Check available CLI commands by typing *help* or use the module factsheet. Make sure the factsheet BOS version number (at the footer) matches the source code version you have.
 
 ### How do I update the source code for an old project? ###
 
@@ -77,9 +59,9 @@ We developed a new form of documentation we call it the Factsheet: it's a mix be
 
 To preseve maximum code portability between projects, we advise you to:
 
-1- Keep all you custom source and header files in the *User* folder.
+1- Keep all your custom source and header files in the *User* folder.
 
-2- Add your code to the *FrontEndTask()* in *main.c* and add other custom function there including custom interrupt callbacks.
+2- Add your code to the *FrontEndTask()* in *main.c* and add other custom functions there including custom interrupt callbacks.
 
 3- Add any external header files you want to include to the *project.h* file.
 
@@ -87,41 +69,16 @@ To preseve maximum code portability between projects, we advise you to:
 
 ===============================================
 
-## Software FAQ ##
+## FAQ ##
 
-### Q: ###
-A:
-
-## Hardware FAQ ##
-
-### Q: How do I use H1BR60 to add logging capability to my projects?
-A: H05R00 module logs all sorts of signals connected to its array ports. You can stream digital data from external hardware using serial ports (UART), connect digital sensors (3.3V max) directly, connect external switches of any type (mechanical, optical, magnetic) or momentary and toggle buttons.
-
-### Q: Can I log same signal in different ways?
-A: Yes! You can start two simultaneous logs of different types (rate or event) and log same or different signals.
-
-### Q: Can I log a complicated condition/combination of signals?
-A: Yes! You can write C code to combine signals in complex ways and write the output to an internal RAM buffer. This buffer / memory location can then be logged either on rate- or event-basis.
-
-### Q: What's the maximum logging rate in H1BR60?
-A: Maximum logging rate is 1KHz. However, it depends on number of simultaneous logs and number of variables per log. Usually it is several hundred Hz in complicated scenarios.
-
-Check our [website](https://www.hexabitz.com/faq/) for more information or contact us about any questions or feedback!
+Check out the *FAQ* tab in module page or our general [FAQ](https://www.hexabitz.com/faq/) section on the website. Feel free to [contact](info@hexabitz.com) us about any questions or feedback!
 
 ===============================================
 
-## See also these module repositories ##
+## Whom do I talk to? ##
 
-- [H01R00](https://bitbucket.org/hexabitz/h01r0) - RGB LED Module
-
-- [H09R00]() - 600VAC / 1.2A Solid State Relay Module
-
-===============================================
-
-## Who do I talk to? ##
-
-* Email us at info@hexabitz.com for any inquiries
-* Or connect with us on [Hackaday.io](https://hackaday.io/Hexabitz)
+* [Email](info@hexabitz.com) us for any inquiries
+* Or connect with us on [Hackaday.io](https://hackaday.io/Hexabitz), [Twitter](https://twitter.com/HexabitzInc) or [Facebook](https://www.facebook.com/HexabitzInc/)!
 
 ## How do I contribute? ##
 

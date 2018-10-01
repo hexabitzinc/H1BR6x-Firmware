@@ -69,6 +69,7 @@ Module_Status MicroSD_Init(void);
 
 /* Create CLI commands --------------------------------------------------------*/
 
+portBASE_TYPE demoCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 portBASE_TYPE deleteLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 portBASE_TYPE logVarCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
@@ -77,11 +78,20 @@ portBASE_TYPE stopCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const 
 portBASE_TYPE pauseCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 portBASE_TYPE resumeCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString );
 
+/* CLI command structure : demo */
+const CLI_Command_Definition_t demoCommandDefinition =
+{
+	( const int8_t * ) "demo", /* The command string to type. */
+	( const int8_t * ) "(H1BR6) demo:\r\n Run a demo program to test module functionality\r\n\r\n",
+	demoCommand, /* The function to run. */
+	0 /* No parameters are expected. */
+};
+/*-----------------------------------------------------------*/
 /* CLI command structure : addlog */
 const CLI_Command_Definition_t addLogCommandDefinition =
 {
 	( const int8_t * ) "addlog", /* The command string to type. */
-	( const int8_t * ) "addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
+	( const int8_t * ) "(H1BR6) addlog:\r\n Add a new log file. Specifiy log name (1st par.); type (2nd par.): 'rate' or 'event'; \
 rate (3rd par.): logging rate in Hz (max 1000), delimiter format (4th par.): 'space', 'tab' or 'comma'; index column format \
 (5th par.): 'none', 'sample' or 'time'; and index column label text (6th par.)\r\n\r\n",
 	addLogCommand, /* The function to run. */
@@ -92,7 +102,7 @@ rate (3rd par.): logging rate in Hz (max 1000), delimiter format (4th par.): 'sp
 const CLI_Command_Definition_t logVarCommandDefinition =
 {
 	( const int8_t * ) "logvar", /* The command string to type. */
-	( const int8_t * ) "logvar:\r\n Add a new log variable to an existing log (1st par.). Specify variable type (2nd and 3rd par.): \
+	( const int8_t * ) "(H1BR6) logvar:\r\n Add a new log variable to an existing log (1st par.). Specify variable type (2nd and 3rd par.): \
 'port digital', 'port data', 'port button', 'memory uint8', 'memory int8', 'memory uint16', 'memory int16', 'memory uint32', \
 'memory int32', 'memory float' ; source (4th par.): ports 'p1'..'px', buttons 'b1'..'bx' or memory location (Flash or RAM); \
 and column label text (5th par.)\r\n\r\n",
@@ -104,7 +114,7 @@ and column label text (5th par.)\r\n\r\n",
 const CLI_Command_Definition_t deleteLogCommandDefinition =
 {
 	( const int8_t * ) "deletelog", /* The command string to type. */
-	( const int8_t * ) "deletelog:\r\n Delete a log file. Specifiy log name (1st par.) and delete options (2nd par.): 'all' or \
+	( const int8_t * ) "(H1BR6) deletelog:\r\n Delete a log file. Specifiy log name (1st par.) and delete options (2nd par.): 'all' or \
 'keepdisk' to keep log on the uSD card\r\n\r\n",
 	deleteLogCommand, /* The function to run. */
 	2 /* Two parameters are expected. */
@@ -114,7 +124,7 @@ const CLI_Command_Definition_t deleteLogCommandDefinition =
 const CLI_Command_Definition_t startCommandDefinition =
 {
 	( const int8_t * ) "start", /* The command string to type. */
-	( const int8_t * ) "start:\r\n Start the log with log name (1st par.)\r\n\r\n",
+	( const int8_t * ) "(H1BR6) start:\r\n Start the log with log name (1st par.)\r\n\r\n",
 	startCommand, /* The function to run. */
 	1 /* One parameter is expected. */
 };
@@ -123,7 +133,7 @@ const CLI_Command_Definition_t startCommandDefinition =
 const CLI_Command_Definition_t stopCommandDefinition =
 {
 	( const int8_t * ) "stop", /* The command string to type. */
-	( const int8_t * ) "stop:\r\n Stop the log with log name (1st par.)\r\n\r\n",
+	( const int8_t * ) "(H1BR6) stop:\r\n Stop the log with log name (1st par.)\r\n\r\n",
 	stopCommand, /* The function to run. */
 	1 /* One parameter is expected. */
 };
@@ -132,7 +142,7 @@ const CLI_Command_Definition_t stopCommandDefinition =
 const CLI_Command_Definition_t pauseCommandDefinition =
 {
 	( const int8_t * ) "pause", /* The command string to type. */
-	( const int8_t * ) "pause:\r\n Pause the log with log name (1st par.)\r\n\r\n",
+	( const int8_t * ) "(H1BR6) pause:\r\n Pause the log with log name (1st par.)\r\n\r\n",
 	pauseCommand, /* The function to run. */
 	1 /* One parameter is expected. */
 };
@@ -141,7 +151,7 @@ const CLI_Command_Definition_t pauseCommandDefinition =
 const CLI_Command_Definition_t resumeCommandDefinition =
 {
 	( const int8_t * ) "resume", /* The command string to type. */
-	( const int8_t * ) "resume:\r\n Resume the log with log name (1st par.)\r\n\r\n",
+	( const int8_t * ) "(H1BR6) resume:\r\n Resume the log with log name (1st par.)\r\n\r\n",
 	resumeCommand, /* The function to run. */
 	1 /* One parameter is expected. */
 };
@@ -201,6 +211,7 @@ Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uin
 */
 void RegisterModuleCLICommands(void)
 {
+	FreeRTOS_CLIRegisterCommand( &demoCommandDefinition );
 	FreeRTOS_CLIRegisterCommand( &addLogCommandDefinition );
 	FreeRTOS_CLIRegisterCommand( &deleteLogCommandDefinition );
 	FreeRTOS_CLIRegisterCommand( &logVarCommandDefinition );
@@ -1004,6 +1015,60 @@ Module_Status DeleteLog(char* logName, options_t options)
 	|															Commands																 	|
    ----------------------------------------------------------------------- 
 */
+
+portBASE_TYPE demoCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
+{
+	static const int8_t *pcOpenMessage = ( int8_t * ) "Test file created\r\n";
+	static const int8_t *pcVerifyMessage = ( int8_t * ) "Write/read operations verified\r\n";
+	static const int8_t *pcDeleteMessage = ( int8_t * ) "Test file deleted\r\n";
+	static const int8_t *pcFileMessage = ( int8_t * ) "Testing failed\r\n";
+	FRESULT res;
+	
+	/* Remove compile time warnings about unused parameters, and check the
+	write buffer is not NULL.  NOTE - for simplicity, this example assumes the
+	write buffer length is adequate, so does not check for buffer overflows. */
+	( void ) pcCommandString;
+	( void ) xWriteBufferLen;
+	configASSERT( pcWriteBuffer );
+
+	/* Create a file */
+	res = f_open(&tempFile, "TestFile", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+	if (res != FR_OK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcFileMessage);		
+		return pdFALSE;
+	}
+	writePxMutex(PcPort, ( char * ) pcOpenMessage, strlen(( char * ) pcOpenMessage), 10, 10);
+	
+	/* Verify read / write */
+	res = f_write(&tempFile, "HEXABITZ", 8, (void *)&byteswritten);
+	if (res != FR_OK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcFileMessage);		
+		return pdFALSE;
+	}	
+	char tempStr[10] = {0};
+	res = f_lseek(&tempFile, 0);
+	res = f_read(&tempFile, tempStr, 8, (void *)&byteswritten);
+	if (res != FR_OK || strncmp(tempStr, "HEXABITZ", 8) != 0) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcFileMessage);		
+		return pdFALSE;
+	}		
+	writePxMutex(PcPort, ( char * ) pcVerifyMessage, strlen(( char * ) pcVerifyMessage), 10, 10);
+	
+	/* Close and delete the file */
+	res = f_close(&tempFile);
+	res = f_unlink("TestFile");
+	if (res != FR_OK) {
+		strcpy( ( char * ) pcWriteBuffer, ( char * ) pcFileMessage);		
+		return pdFALSE;
+	}	
+	strcpy( ( char * ) pcWriteBuffer, ( char * ) pcDeleteMessage);
+	
+	/* There is no more data to return after this single string, so return
+	pdFALSE. */
+	return pdFALSE;
+}
+
+/*-----------------------------------------------------------*/
 
 portBASE_TYPE addLogCommand( int8_t *pcWriteBuffer, size_t xWriteBufferLen, const int8_t *pcCommandString )
 {
