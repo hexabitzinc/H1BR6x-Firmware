@@ -13,6 +13,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "BOS.h"
+#include "H1BR6_MemoryMap.h"	
 #include "H1BR6_uart.h"	
 #include "H1BR6_gpio.h"	
 #include "H1BR6_dma.h"		
