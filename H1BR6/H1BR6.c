@@ -186,7 +186,7 @@ void Module_Init(void)
 	needToDelayButtonStateReset = true;
 
 	/* Create the logging task */
-	xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal, &LogTaskHandle);				
+	xTaskCreate(LogTask, (const char *) "LogTask", (2*configMINIMAL_STACK_SIZE), NULL, osPriorityNormal-osPriorityIdle, &LogTaskHandle);				
 }
 
 /*-----------------------------------------------------------*/
