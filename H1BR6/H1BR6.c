@@ -32,8 +32,8 @@ module_param_t modParam[NUM_MODULE_PARAMS] = {{.paramPtr=NULL, .paramFormat=FMT_
 /*=================================================================================*/
 /*========================= Private variables  ====================================*/
 /*=================================================================================*/
-log_t logs[MAX_LOGS];
-logVar_t logVars[MAX_LOG_VARS];
+log_t logs[MAX_LOGS] = {0};
+logVar_t logVars[MAX_LOG_VARS] = {0};
 uint32_t compareValue[MAX_LOG_VARS]; 
 /* File system object for SD card logical drive */
 FATFS SDFatFs; 
@@ -170,8 +170,6 @@ const CLI_Command_Definition_t resumeCommandDefinition =
 void Module_Init(void)
 {
 	/* Init global variables */
-	memset (logs, 0x00U, ((size_t)MAX_LOGS * sizeof(logs)));
-	memset (logs, 0x00U, ((size_t)MAX_LOG_VARS * sizeof(logVars)));
 	enableSequential = true;
 	enableTimeDateHeader = true;
 	
@@ -193,7 +191,7 @@ void Module_Init(void)
 
 /* --- H1BR6 message processing task. 
 */
-Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst)
+Module_Status Module_MessagingTask(uint16_t code, uint8_t port, uint8_t src, uint8_t dst, uint8_t shift)
 {
 	Module_Status result = H1BR6_OK;
 	
